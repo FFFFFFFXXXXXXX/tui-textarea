@@ -334,7 +334,7 @@ impl Vim {
                         ctrl: false,
                         ..
                     } if self.mode == Mode::Visual => {
-                        textarea.cut();
+                        textarea.delete_line(true);
                         return Transition::Mode(Mode::Normal);
                     }
                     Input {
@@ -342,7 +342,7 @@ impl Vim {
                         ctrl: false,
                         ..
                     } if self.mode == Mode::Visual => {
-                        textarea.cut();
+                        textarea.delete_line(true);
                         return Transition::Mode(Mode::Insert);
                     }
                     input => return Transition::Pending(input),
@@ -355,11 +355,11 @@ impl Vim {
                         Transition::Mode(Mode::Normal)
                     }
                     Mode::Operator('d') => {
-                        textarea.cut();
+                        textarea.delete_line(true);
                         Transition::Mode(Mode::Normal)
                     }
                     Mode::Operator('c') => {
-                        textarea.cut();
+                        textarea.delete_line(true);
                         Transition::Mode(Mode::Insert)
                     }
                     _ => Transition::Nop,

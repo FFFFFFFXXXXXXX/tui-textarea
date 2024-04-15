@@ -11,6 +11,9 @@ pub enum EditKind {
     DeleteStr(String),
     InsertChunk(Vec<String>),
     DeleteChunk(Vec<String>),
+    MoveLine(bool),
+    DeleteLine(usize, String),
+    InsertLine(usize, String),
 }
 
 impl EditKind {
@@ -71,6 +74,19 @@ impl EditKind {
                 first_line.truncate(after.offset);
                 first_line.push_str(&last_line);
             }
+            EditKind::MoveLine(reverse) => {
+                if *reverse {
+                    lines.swap(after.row, before.row);
+                } else {
+                    lines.swap(before.row, after.row);
+                }
+            }
+            EditKind::DeleteLine(line, _string) => {
+                lines.remove(*line);
+            }
+            EditKind::InsertLine(line, string) => {
+                lines.insert(*line, string.clone());
+            }
         }
     }
 
@@ -85,6 +101,9 @@ impl EditKind {
             DeleteStr(s) => InsertStr(s),
             InsertChunk(c) => DeleteChunk(c),
             DeleteChunk(c) => InsertChunk(c),
+            MoveLine(reverse) => MoveLine(!reverse),
+            DeleteLine(line, string) => InsertLine(line, string),
+            InsertLine(line, string) => DeleteLine(line, string),
         }
     }
 }
@@ -154,6 +173,12 @@ impl History {
 
         self.index += 1;
         self.edits.push_back(edit);
+    }
+
+    pub fn apply(&mut self, lines: &mut Vec<String>) -> (usize, usize) {
+        let edit = &self.edits[self.index - 1];
+        edit.redo(lines);
+        edit.cursor_after()
     }
 
     pub fn redo(&mut self, lines: &mut Vec<String>) -> Option<(usize, usize)> {

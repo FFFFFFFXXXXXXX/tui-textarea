@@ -969,7 +969,7 @@ fn test_cut_single_line() {
             t.move_cursor(CursorMove::Jump(0, i as u16));
             t.start_selection();
             t.move_cursor(CursorMove::Jump(0, j as u16));
-            t.cut();
+            t.delete_line(true);
 
             assert_eq!(t.yank_text(), &"abc"[i..j], "from {i} to {j}");
 
@@ -988,7 +988,7 @@ fn test_cut_single_line() {
 }
 
 #[test]
-fn test_copy_cut_empty() {
+fn test_copy_empty() {
     for row in 0..=2 {
         for col in 0..=2 {
             let check = |f: fn(&mut TextArea<'_>)| {
@@ -1003,9 +1003,6 @@ fn test_copy_cut_empty() {
                 assert_no_undo_redo(&mut t, "");
             };
 
-            check(|t| {
-                assert!(!t.cut());
-            });
             check(|t| t.copy());
         }
     }
@@ -1275,7 +1272,7 @@ fn test_copy_cut_paste_multi_lines() {
             t.move_cursor(CursorMove::Jump(srow as _, scol as _));
             t.start_selection();
             t.move_cursor(CursorMove::Jump(erow as _, ecol as _));
-            t.cut();
+            t.delete_line(true);
 
             assert_eq!(t.cursor(), (srow, scol), "{test:?}");
             assert_eq!(t.yank_text(), yanked, "{test:?}");
@@ -1306,7 +1303,7 @@ fn test_copy_cut_paste_multi_lines() {
             t.move_cursor(CursorMove::Jump(erow as _, ecol as _));
             t.start_selection();
             t.move_cursor(CursorMove::Jump(srow as _, scol as _));
-            t.cut();
+            t.delete_line(true);
 
             assert_eq!(t.cursor(), (srow, scol), "{test:?}");
             assert_eq!(t.yank_text(), yanked, "{test:?}");
@@ -1502,7 +1499,7 @@ fn test_select_all() {
     t.select_all();
     assert!(t.is_selecting());
     assert_eq!(t.cursor(), (2, 3));
-    t.cut();
+    t.delete_line(true);
     assert_eq!(t.lines(), [""]);
     assert_eq!(t.yank_text(), "aaa\nbbb\nccc");
     assert_undo_redo((2, 3), &["aaa", "bbb", "ccc"], &[""], &mut t, "");

@@ -26,6 +26,7 @@ impl From<KeyCode> for Key {
             KeyCode::Up => Key::Up,
             KeyCode::Down => Key::Down,
             KeyCode::Tab => Key::Tab,
+            KeyCode::BackTab => Key::BackTab,
             KeyCode::Delete => Key::Delete,
             KeyCode::Home => Key::Home,
             KeyCode::End => Key::End,
