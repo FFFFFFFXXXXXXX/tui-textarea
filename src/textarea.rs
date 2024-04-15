@@ -13,8 +13,8 @@ use crate::widget::{Renderer, Viewport};
 use crate::word::{find_word_exclusive_end_forward, find_word_start_backward};
 #[cfg(feature = "ratatui")]
 use ratatui::text::Line;
-use std::cmp::Ordering;
 use std::fmt;
+use std::cmp::{min, Ordering};
 #[cfg(feature = "tuirs")]
 use tui::text::Spans as Line;
 use unicode_width::UnicodeWidthChar as _;
@@ -245,12 +245,13 @@ impl<'a> TextArea<'a> {
         let input = input.into();
         let modified = match input {
             Input {
-                key: Key::Char('m'),
+                key: Key::Char('d'),
                 ctrl: true,
                 alt: false,
                 ..
-            }
-            | Input {
+            } => self.duplicate_line(),
+
+            Input {
                 key: Key::Char('\n' | '\r'),
                 ctrl: false,
                 alt: false,
@@ -262,40 +263,45 @@ impl<'a> TextArea<'a> {
                 self.insert_newline();
                 true
             }
-            Input {
-                key: Key::Char(c),
-                ctrl: false,
-                alt: false,
-                ..
-            } => {
-                self.insert_char(c);
-                true
-            }
+
             Input {
                 key: Key::Tab,
                 ctrl: false,
                 alt: false,
-                ..
+                shift: false,
             } => self.insert_tab(),
             Input {
-                key: Key::Char('h'),
-                ctrl: true,
+                key: Key::BackTab,
+                ctrl: false,
                 alt: false,
                 ..
             }
             | Input {
+                key: Key::Tab,
+                ctrl: false,
+                alt: false,
+                shift: true,
+            } => self.delete_tab_from_head(),
+
+            Input {
                 key: Key::Backspace,
                 ctrl: false,
                 alt: false,
                 ..
             } => self.delete_char(),
             Input {
-                key: Key::Char('d'),
+                key: Key::Backspace,
                 ctrl: true,
                 alt: false,
                 ..
-            }
-            | Input {
+            } => self.delete_word(),
+            Input {
+                key: Key::Delete,
+                ctrl: true,
+                alt: false,
+                ..
+            } => self.delete_next_word(),
+            Input {
                 key: Key::Delete,
                 ctrl: false,
                 alt: false,
@@ -305,51 +311,32 @@ impl<'a> TextArea<'a> {
                 key: Key::Char('k'),
                 ctrl: true,
                 alt: false,
-                ..
+                shift: false,
             } => self.delete_line_by_end(),
             Input {
                 key: Key::Char('j'),
                 ctrl: true,
                 alt: false,
-                ..
+                shift: false,
             } => self.delete_line_by_head(),
             Input {
-                key: Key::Char('w'),
+                key: Key::Char('K'),
                 ctrl: true,
                 alt: false,
-                ..
-            }
-            | Input {
-                key: Key::Char('h'),
-                ctrl: false,
-                alt: true,
-                ..
-            }
-            | Input {
-                key: Key::Backspace,
-                ctrl: false,
-                alt: true,
-                ..
-            } => self.delete_word(),
+                shift: true,
+            } => self.delete_line(false),
+
             Input {
-                key: Key::Delete,
-                ctrl: false,
-                alt: true,
-                ..
-            }
-            | Input {
-                key: Key::Char('d'),
-                ctrl: false,
-                alt: true,
-                ..
-            } => self.delete_next_word(),
-            Input {
-                key: Key::Char('n'),
+                key: Key::Char('a'),
                 ctrl: true,
                 alt: false,
-                shift,
+                shift: false,
+            } => {
+                self.select_all();
+                true
             }
-            | Input {
+
+            Input {
                 key: Key::Down,
                 ctrl: false,
                 alt: false,
@@ -359,12 +346,6 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Char('p'),
-                ctrl: true,
-                alt: false,
-                shift,
-            }
-            | Input {
                 key: Key::Up,
                 ctrl: false,
                 alt: false,
@@ -374,12 +355,6 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Char('f'),
-                ctrl: true,
-                alt: false,
-                shift,
-            }
-            | Input {
                 key: Key::Right,
                 ctrl: false,
                 alt: false,
@@ -389,12 +364,6 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Char('b'),
-                ctrl: true,
-                alt: false,
-                shift,
-            }
-            | Input {
                 key: Key::Left,
                 ctrl: false,
                 alt: false,
@@ -403,54 +372,26 @@ impl<'a> TextArea<'a> {
                 self.move_cursor_with_shift(CursorMove::Back, shift);
                 false
             }
+
             Input {
-                key: Key::Char('a'),
-                ctrl: true,
-                alt: false,
-                shift,
-            }
-            | Input {
                 key: Key::Home,
                 shift,
                 ..
-            }
-            | Input {
-                key: Key::Left | Key::Char('b'),
-                ctrl: true,
-                alt: true,
-                shift,
             } => {
                 self.move_cursor_with_shift(CursorMove::Head, shift);
                 false
             }
             Input {
-                key: Key::Char('e'),
-                ctrl: true,
-                alt: false,
-                shift,
-            }
-            | Input {
                 key: Key::End,
                 shift,
                 ..
-            }
-            | Input {
-                key: Key::Right | Key::Char('f'),
-                ctrl: true,
-                alt: true,
-                shift,
             } => {
                 self.move_cursor_with_shift(CursorMove::End, shift);
                 false
             }
+
             Input {
-                key: Key::Char('<'),
-                ctrl: false,
-                alt: true,
-                shift,
-            }
-            | Input {
-                key: Key::Up | Key::Char('p'),
+                key: Key::Up,
                 ctrl: true,
                 alt: true,
                 shift,
@@ -459,13 +400,7 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Char('>'),
-                ctrl: false,
-                alt: true,
-                shift,
-            }
-            | Input {
-                key: Key::Down | Key::Char('n'),
+                key: Key::Down,
                 ctrl: true,
                 alt: true,
                 shift,
@@ -474,12 +409,6 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Char('f'),
-                ctrl: false,
-                alt: true,
-                shift,
-            }
-            | Input {
                 key: Key::Right,
                 ctrl: true,
                 alt: false,
@@ -489,12 +418,6 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Char('b'),
-                ctrl: false,
-                alt: true,
-                shift,
-            }
-            | Input {
                 key: Key::Left,
                 ctrl: true,
                 alt: false,
@@ -504,18 +427,6 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Char(']'),
-                ctrl: false,
-                alt: true,
-                shift,
-            }
-            | Input {
-                key: Key::Char('n'),
-                ctrl: false,
-                alt: true,
-                shift,
-            }
-            | Input {
                 key: Key::Down,
                 ctrl: true,
                 alt: false,
@@ -525,18 +436,6 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Char('['),
-                ctrl: false,
-                alt: true,
-                shift,
-            }
-            | Input {
-                key: Key::Char('p'),
-                ctrl: false,
-                alt: true,
-                shift,
-            }
-            | Input {
                 key: Key::Up,
                 ctrl: true,
                 alt: false,
@@ -545,20 +444,29 @@ impl<'a> TextArea<'a> {
                 self.move_cursor_with_shift(CursorMove::ParagraphBack, shift);
                 false
             }
+
             Input {
-                key: Key::Char('u'),
+                key: key @ (Key::Up | Key::Down),
+                ctrl: false,
+                alt: true,
+                shift: false,
+            } => self.move_line(key),
+
+            Input {
+                key: Key::Char('z'),
                 ctrl: true,
                 alt: false,
                 ..
             } => self.undo(),
             Input {
-                key: Key::Char('r'),
+                key: Key::Char('y'),
                 ctrl: true,
                 alt: false,
                 ..
             } => self.redo(),
+
             Input {
-                key: Key::Char('y'),
+                key: Key::Char('v'),
                 ctrl: true,
                 alt: false,
                 ..
@@ -572,7 +480,7 @@ impl<'a> TextArea<'a> {
                 alt: false,
                 ..
             }
-            | Input { key: Key::Cut, .. } => self.cut(),
+            | Input { key: Key::Cut, .. } => self.delete_line(true),
             Input {
                 key: Key::Char('c'),
                 ctrl: true,
@@ -583,13 +491,8 @@ impl<'a> TextArea<'a> {
                 self.copy();
                 false
             }
+
             Input {
-                key: Key::Char('v'),
-                ctrl: true,
-                alt: false,
-                shift,
-            }
-            | Input {
                 key: Key::PageDown,
                 shift,
                 ..
@@ -598,12 +501,6 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Char('v'),
-                ctrl: false,
-                alt: true,
-                shift,
-            }
-            | Input {
                 key: Key::PageUp,
                 shift,
                 ..
@@ -611,21 +508,16 @@ impl<'a> TextArea<'a> {
                 self.scroll_with_shift(Scrolling::PageUp, shift);
                 false
             }
+
             Input {
-                key: Key::MouseScrollDown,
-                shift,
+                key: Key::Char(c),
+                ctrl: false,
+                alt: false,
+                shift: false,
                 ..
             } => {
-                self.scroll_with_shift((1, 0).into(), shift);
-                false
-            }
-            Input {
-                key: Key::MouseScrollUp,
-                shift,
-                ..
-            } => {
-                self.scroll_with_shift((-1, 0).into(), shift);
-                false
+                self.insert_char(c);
+                true
             }
             _ => false,
         };
@@ -646,7 +538,7 @@ impl<'a> TextArea<'a> {
             self.cursor,
             self.lines[r].chars().count(),
             self.lines[r],
-            input,
+            input
         );
 
         modified
@@ -710,6 +602,11 @@ impl<'a> TextArea<'a> {
             }
             _ => false,
         }
+    }
+
+    fn push_change(&mut self, edit: Edit) {
+        self.history.push(edit);
+        self.cursor = self.history.apply(&mut self.lines);
     }
 
     fn push_history(&mut self, kind: EditKind, before: Pos, after_offset: usize) {
@@ -867,6 +764,7 @@ impl<'a> TextArea<'a> {
         } else {
             EditKind::DeleteChunk(deleted)
         };
+
         self.push_history(edit, end, start.offset);
     }
 
@@ -1033,6 +931,98 @@ impl<'a> TextArea<'a> {
         self.insert_piece(spaces(len).to_string())
     }
 
+    /// Remove a tab at the start of the line of the current cursor position.
+    /// Note that this method does nothing when the tab length is 0.
+    /// This method returns if a tab string was removed or not in the textarea.
+    /// ```
+    /// use tui_textarea::{TextArea, CursorMove};
+    ///
+    /// let mut textarea = TextArea::from(["    hi"]);
+    ///
+    /// textarea.insert_tab();
+    /// assert_eq!(textarea.lines(), ["        hi"]);
+    /// textarea.delete_tab_from_head();
+    /// assert_eq!(textarea.lines(), ["    hi"]);
+    ///
+    /// let mut textarea = TextArea::from(["\thi"]);
+    /// textarea.set_hard_tab_indent(true);
+    ///
+    /// textarea.insert_tab();
+    /// assert_eq!(textarea.lines(), ["\t\thi"]);
+    /// textarea.delete_tab_from_head();
+    /// assert_eq!(textarea.lines(), ["\thi"]);
+    /// ```
+    pub fn delete_tab_from_head(&mut self) -> bool {
+        if self.tab_len == 0 {
+            return false;
+        }
+
+        let tab = if self.hard_tab_indent {
+            "\t"
+        } else {
+            spaces(self.tab_len)
+        };
+        let tab_len = tab.len();
+
+        let (row, col) = self.cursor;
+        if !self.lines[row].starts_with(tab) {
+            return false;
+        }
+
+        let first_non_tab_idx = self.lines[row]
+            .char_indices()
+            .find_map(|(i, char)| (char != ' ' && char != '\t').then(|| i))
+            .unwrap_or_else(|| self.lines[row].len().saturating_sub(1));
+
+        self.cursor = (row, col.saturating_sub(tab_len));
+        self.selection_start = self
+            .selection_start
+            .map(|(row, col)| (row, col.saturating_sub(tab_len)));
+
+        self.push_change(Edit::new(
+            EditKind::DeleteStr(tab.to_owned()),
+            Pos::new(row, col, first_non_tab_idx - tab_len),
+            Pos::new(row, col - tab_len, col - tab_len),
+        ));
+
+        true
+    }
+
+    /// Remove a tab at the start of the line of the current cursor position.
+    /// Note that this method does nothing when the tab length is 0.
+    /// This method returns if a tab string was removed or not in the textarea.
+    /// ```
+    /// use tui_textarea::{TextArea, CursorMove};
+    ///
+    /// let mut textarea = TextArea::from(["    hi"]);
+    ///
+    /// textarea.insert_tab();
+    /// assert_eq!(textarea.lines(), ["        hi"]);
+    /// textarea.delete_tab_from_head();
+    /// assert_eq!(textarea.lines(), ["    hi"]);
+    ///
+    /// let mut textarea = TextArea::from(["\thi"]);
+    /// textarea.set_hard_tab_indent(true);
+    ///
+    /// textarea.insert_tab();
+    /// assert_eq!(textarea.lines(), ["\t\thi"]);
+    /// textarea.delete_tab_from_head();
+    /// assert_eq!(textarea.lines(), ["\thi"]);
+    /// ```
+    pub fn duplicate_line(&mut self) -> bool {
+        self.cancel_selection();
+
+        let (row, col) = self.cursor;
+
+        self.push_change(Edit::new(
+            EditKind::InsertChunk(vec![self.lines[row].clone(), String::new()]),
+            Pos::new(row, col, 0),
+            Pos::new(row + 1, col, 0),
+        ));
+
+        true
+    }
+
     /// Insert a newline at current cursor position.
     /// ```
     /// use tui_textarea::{TextArea, CursorMove};
@@ -1152,6 +1142,64 @@ impl<'a> TextArea<'a> {
         }
 
         self.delete_char()
+    }
+
+    pub fn delete_line(&mut self, should_yank: bool) -> bool {
+        if self.delete_selection(should_yank) {
+            return true;
+        }
+
+        let (row, col) = self.cursor;
+
+        let edit = if self.lines.len() == 1 {
+            // if there is only one line and it is empty there is nothin to do
+            if self.lines[0].is_empty() {
+                return false;
+            }
+
+            let line_to_remove = &self.lines[row];
+
+            if should_yank {
+                self.yank = line_to_remove.to_owned().into();
+            }
+
+            Edit::new(
+                EditKind::DeleteStr(line_to_remove.to_owned()),
+                Pos::new(row, col, col),
+                Pos::new(0, 0, 0),
+            )
+        } else if row == self.lines.len().saturating_sub(1) {
+            let line_to_remove = &self.lines[row];
+            let new_row = row - 1;
+            let new_col = min(col, self.lines[new_row].len().saturating_sub(1));
+
+            if should_yank {
+                self.yank = line_to_remove.to_owned().into();
+            }
+
+            Edit::new(
+                EditKind::DeleteLine(row, line_to_remove.to_owned()),
+                Pos::new(row, col, 0),
+                Pos::new(new_row, new_col, 0),
+            )
+        } else {
+            let line_to_remove = &self.lines[row];
+            let new_col = min(col, self.lines[row + 1].len().saturating_sub(1));
+
+            if should_yank {
+                self.yank = line_to_remove.to_owned().into();
+            }
+
+            Edit::new(
+                EditKind::DeleteLine(row, line_to_remove.to_owned()),
+                Pos::new(row, col, 0),
+                Pos::new(row, new_col, 0),
+            )
+        };
+
+        self.push_change(edit);
+
+        true
     }
 
     /// Delete string from cursor to end of the line. When the cursor is at end of line, the newline next to the cursor
@@ -1337,7 +1385,7 @@ impl<'a> TextArea<'a> {
     /// textarea.select_all();
     ///
     /// // Cut the entire text;
-    /// textarea.cut();
+    /// textarea.delete_line(true);
     ///
     /// assert_eq!(textarea.lines(), [""]); // Buffer is now empty
     /// assert_eq!(textarea.yank_text(), "aaa\nbbb\nccc");
@@ -1454,29 +1502,6 @@ impl<'a> TextArea<'a> {
         }
     }
 
-    /// Cut the selected text and place it in the yank buffer. This method returns whether the text was modified.
-    /// The cursor will move to the start position of the text selection.
-    /// To get the yanked text, use [`TextArea::yank_text`].
-    /// ```
-    /// use tui_textarea::{TextArea, Key, Input, CursorMove};
-    ///
-    /// let mut textarea = TextArea::from(["Hello World"]);
-    ///
-    /// // Start text selection at 'W'
-    /// textarea.move_cursor(CursorMove::WordForward);
-    /// textarea.start_selection();
-    ///
-    /// // Select the word "World" and copy the selected text
-    /// textarea.move_cursor(CursorMove::End);
-    /// textarea.cut();
-    ///
-    /// assert_eq!(textarea.yank_text(), "World");
-    /// assert_eq!(textarea.lines(), ["Hello "]);
-    /// ```
-    pub fn cut(&mut self) -> bool {
-        self.delete_selection(true)
-    }
-
     fn delete_selection(&mut self, should_yank: bool) -> bool {
         if let Some((s, e)) = self.take_selection_range() {
             self.delete_range(s, e, should_yank);
@@ -1512,6 +1537,24 @@ impl<'a> TextArea<'a> {
             }
             self.cursor = cursor;
         }
+    }
+
+    pub fn move_line(&mut self, key: Key) -> bool {
+        let (row, col) = self.cursor;
+
+        let row_to_swap_with = match key {
+            Key::Up if row > 0 => row - 1,
+            Key::Down if row < self.lines.len().saturating_sub(1) => row + 1,
+            _ => return false,
+        };
+
+        self.push_change(Edit::new(
+            EditKind::MoveLine(false),
+            Pos::new(row, col, col),
+            Pos::new(row_to_swap_with, col, col),
+        ));
+
+        true
     }
 
     /// Undo the last modification. This method returns if the undo modified text contents or not in the textarea.

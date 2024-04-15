@@ -339,7 +339,7 @@ impl<'a> Editor<'a> {
                     }
                     input => {
                         let buffer = &mut self.buffers[self.current];
-                        buffer.modified = buffer.textarea.input(input);
+                        buffer.modified |= buffer.textarea.input(input);
                     }
                 }
             }
