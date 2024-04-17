@@ -952,7 +952,12 @@ fn test_copy_single_line() {
             t.move_cursor(CursorMove::Jump(0, j as u16));
             t.copy();
 
-            assert_eq!(t.yank_text(), &"abc"[i..j], "from {i} to {j}");
+            if (i..j).is_empty() {
+                assert_eq!(t.yank_text(), "abc", "from {i} to {j}");
+            } else {
+                assert_eq!(t.yank_text(), &"abc"[i..j], "from {i} to {j}");
+            }
+
             assert_eq!(t.lines(), ["abc"], "from {i} to {j}");
 
             assert_no_undo_redo(&mut t, (i, j));

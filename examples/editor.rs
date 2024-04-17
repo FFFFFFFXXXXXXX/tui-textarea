@@ -9,12 +9,10 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Terminal;
 use std::borrow::Cow;
-use std::env;
 use std::fmt::Display;
-use std::fs;
-use std::io;
-use std::io::{BufRead, Write};
+use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
+use std::{env, fs};
 use tui_textarea::{CursorMove, Input, Key, TextArea};
 
 macro_rules! error {
@@ -126,10 +124,19 @@ impl<'a> Buffer<'a> {
             return Ok(());
         }
         let mut f = io::BufWriter::new(fs::File::create(&self.path)?);
-        for line in self.textarea.lines() {
+        let lines = self.textarea.lines();
+        for line in lines.iter().take(lines.len() - 1) {
             f.write_all(line.as_bytes())?;
             f.write_all(b"\n")?;
         }
+
+        if let Some(last_line) = lines.last() {
+            f.write_all(last_line.as_bytes())?;
+            if !last_line.is_empty() {
+                f.write_all(b"\n")?;
+            }
+        }
+
         self.modified = false;
         Ok(())
     }
