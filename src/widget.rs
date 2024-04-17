@@ -32,7 +32,9 @@ impl Clone for Viewport {
 impl Viewport {
     pub fn scroll_top(&self) -> (u16, u16) {
         let u = self.0.load(Ordering::Relaxed);
-        ((u >> 16) as u16, u as u16)
+        let row = (u >> 16) as u16;
+        let col = u as u16;
+        (row, col)
     }
 
     pub fn rect(&self) -> (u16, u16, u16, u16) {
@@ -65,17 +67,15 @@ impl Viewport {
     }
 
     pub fn scroll(&mut self, rows: i16, cols: i16) {
-        fn apply_scroll(pos: u16, delta: i16) -> u16 {
-            if delta >= 0 {
-                pos.saturating_add(delta as u16)
-            } else {
-                pos.saturating_sub(-delta as u16)
-            }
-        }
-
         let u = self.0.get_mut();
-        let row = apply_scroll((*u >> 16) as u16, rows);
-        let col = apply_scroll(*u as u16, cols);
+        let row = {
+            let pos = (*u >> 16) as u16;
+            pos.saturating_add_signed(rows)
+        };
+        let col = {
+            let pos = *u as u16;
+            pos.saturating_add_signed(cols)
+        };
         *u = (*u & 0xffff_ffff_0000_0000) | ((row as u64) << 16) | (col as u64);
     }
 }
@@ -92,11 +92,14 @@ impl<'a> Renderer<'a> {
         let lines_len = self.0.lines().len();
         let lnum_len = num_digits(lines_len);
         let bottom_row = cmp::min(top_row + height, lines_len);
-        let mut lines = Vec::with_capacity(bottom_row - top_row);
-        for (i, line) in self.0.lines()[top_row..bottom_row].iter().enumerate() {
-            lines.push(self.0.line_spans(line.as_str(), top_row + i, lnum_len));
-        }
-        Text::from(lines)
+
+        let (row, _) = self.0.cursor();
+        Text::from_iter(
+            self.0.lines()[top_row..bottom_row]
+                .iter()
+                .enumerate()
+                .map(|(i, line)| self.0.line_spans(row, line, top_row + i, lnum_len)),
+        )
     }
 
     #[inline]
@@ -125,10 +128,10 @@ impl<'a> Widget for Renderer<'a> {
             }
         }
 
-        let cursor = self.0.cursor();
+        let (row, col) = self.0.cursor();
         let (top_row, top_col) = self.0.viewport.scroll_top();
-        let top_row = next_scroll_top(top_row, cursor.0 as u16, height);
-        let top_col = next_scroll_top(top_col, cursor.1 as u16, width);
+        let top_row = next_scroll_top(top_row, row as u16, height);
+        let top_col = next_scroll_top(top_col, col as u16, width - (num_digits(row) + 1) as u16);
 
         let (text, style) = if !self.0.placeholder.is_empty() && self.0.is_empty() {
             (self.placeholder_text(), self.0.placeholder_style)

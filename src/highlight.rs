@@ -1,5 +1,4 @@
-use crate::ratatui::style::Style;
-use crate::ratatui::text::Span;
+use crate::ratatui::{style::Style, text::Span};
 use crate::util::{num_digits, spaces};
 #[cfg(feature = "ratatui")]
 use ratatui::text::Line;
@@ -130,7 +129,7 @@ impl<'a> LineHighlighter<'a> {
     }
 
     pub fn line_number(&mut self, row: usize, lnum_len: u8, style: Style) {
-        let pad = spaces(lnum_len - num_digits(row + 1) + 1);
+        let pad = spaces(lnum_len - num_digits(row + 1));
         self.spans
             .push(Span::styled(format!("{}{} ", pad, row + 1), style));
     }
@@ -404,11 +403,7 @@ mod tests {
 
     #[test]
     fn into_spans_line_number() {
-        let tests = [
-            (0, 1, &[(" 1 ", LNUM)][..]),
-            (123, 3, &[(" 124 ", LNUM)][..]),
-            (123, 5, &[("   124 ", LNUM)][..]),
-        ];
+        let tests = [(0, 1, &[("1 ", LNUM)][..]), (123, 3, &[("124 ", LNUM)][..])];
         for test in tests {
             let (row, len, want) = test;
             let mut lh = LineHighlighter::new("", CUR, 4, None, SEL);

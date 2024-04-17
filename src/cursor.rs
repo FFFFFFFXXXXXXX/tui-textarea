@@ -1,6 +1,6 @@
 use crate::widget::Viewport;
 use crate::word::{
-    find_word_inclusive_end_forward, find_word_start_backward, find_word_start_forward,
+    find_word_end_forward, find_word_inclusive_end_forward, find_word_start_backward, find_word_start_forward,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::Arbitrary;
@@ -118,9 +118,9 @@ pub enum CursorMove {
     /// let mut textarea = TextArea::from(["aaa bbb ccc"]);
     ///
     /// textarea.move_cursor(CursorMove::WordForward);
-    /// assert_eq!(textarea.cursor(), (0, 4));
+    /// assert_eq!(textarea.cursor(), (0, 3));
     /// textarea.move_cursor(CursorMove::WordForward);
-    /// assert_eq!(textarea.cursor(), (0, 8));
+    /// assert_eq!(textarea.cursor(), (0, 7));
     /// ```
     WordForward,
     /// Move cursor forward to the next end of word. Word boundary appears at spaces, punctuations, and others. For example
@@ -310,10 +310,13 @@ impl CursorMove {
                 }
             }
             WordForward => {
-                if let Some(col) = find_word_start_forward(&lines[row], col) {
+                let chars = lines[row].chars().count();
+                if let Some(col) = find_word_end_forward(&lines[row], col) {
                     Some((row, col))
-                } else if row + 1 < lines.len() {
-                    Some((row + 1, 0))
+                } else if col == chars {
+                    lines
+                        .get(row + 1)
+                        .map(|line| (row + 1, find_word_end_forward(line, 0).unwrap_or(0)))
                 } else {
                     Some((row, lines[row].chars().count()))
                 }
@@ -321,8 +324,14 @@ impl CursorMove {
             WordBack => {
                 if let Some(col) = find_word_start_backward(&lines[row], col) {
                     Some((row, col))
-                } else if row > 0 {
-                    Some((row - 1, lines[row - 1].chars().count()))
+                } else if col == 0 && row > 0 {
+                    lines.get(row - 1).map(|line| {
+                        let chars = lines[row - 1].chars().count();
+                        (
+                            row - 1,
+                            find_word_start_backward(line, chars).unwrap_or(chars),
+                        )
+                    })
                 } else {
                     Some((row, 0))
                 }

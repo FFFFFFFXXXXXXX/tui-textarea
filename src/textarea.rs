@@ -15,6 +15,8 @@ use crate::word::{find_word_exclusive_end_forward, find_word_start_backward};
 use ratatui::text::Line;
 use std::fmt;
 use std::cmp::{min, Ordering};
+use std::io::BufRead;
+use std::{fs, io};
 #[cfg(feature = "tuirs")]
 use tui::text::Spans as Line;
 use unicode_width::UnicodeWidthChar as _;
@@ -205,6 +207,36 @@ impl<'a> TextArea<'a> {
         }
     }
 
+    pub fn new_from_file(file: &fs::File) -> io::Result<Self> {
+        let mut file_reader = io::BufReader::new(file);
+
+        let mut buf = String::new();
+        let mut lines = Vec::new();
+        let mut ends_in_newline = false;
+        loop {
+            buf.clear();
+            match file_reader.read_line(&mut buf)? {
+                0 => break,
+                _n => {
+                    ends_in_newline = buf.ends_with('\n');
+                    if ends_in_newline {
+                        buf.pop();
+                        if buf.ends_with('\r') {
+                            buf.pop();
+                        }
+                    }
+                    lines.push(buf.clone());
+                }
+            };
+        }
+
+        if ends_in_newline {
+            lines.push(String::new());
+        }
+
+        Ok(Self::new(lines))
+    }
+
     /// Handle a key input with default key mappings. For default key mappings, see the table in
     /// [the module document](./index.html).
     /// `crossterm`, `termion`, and `termwiz` features enable conversion from their own key event types into
@@ -374,41 +406,6 @@ impl<'a> TextArea<'a> {
             }
 
             Input {
-                key: Key::Home,
-                shift,
-                ..
-            } => {
-                self.move_cursor_with_shift(CursorMove::Head, shift);
-                false
-            }
-            Input {
-                key: Key::End,
-                shift,
-                ..
-            } => {
-                self.move_cursor_with_shift(CursorMove::End, shift);
-                false
-            }
-
-            Input {
-                key: Key::Up,
-                ctrl: true,
-                alt: true,
-                shift,
-            } => {
-                self.move_cursor_with_shift(CursorMove::Top, shift);
-                false
-            }
-            Input {
-                key: Key::Down,
-                ctrl: true,
-                alt: true,
-                shift,
-            } => {
-                self.move_cursor_with_shift(CursorMove::Bottom, shift);
-                false
-            }
-            Input {
                 key: Key::Right,
                 ctrl: true,
                 alt: false,
@@ -442,6 +439,42 @@ impl<'a> TextArea<'a> {
                 shift,
             } => {
                 self.move_cursor_with_shift(CursorMove::ParagraphBack, shift);
+                false
+            }
+
+            Input {
+                key: Key::Up,
+                ctrl: true,
+                alt: true,
+                shift,
+            } => {
+                self.move_cursor_with_shift(CursorMove::Top, shift);
+                false
+            }
+            Input {
+                key: Key::Down,
+                ctrl: true,
+                alt: true,
+                shift,
+            } => {
+                self.move_cursor_with_shift(CursorMove::Bottom, shift);
+                false
+            }
+
+            Input {
+                key: Key::Home,
+                shift,
+                ..
+            } => {
+                self.move_cursor_with_shift(CursorMove::Head, shift);
+                false
+            }
+            Input {
+                key: Key::End,
+                shift,
+                ..
+            } => {
+                self.move_cursor_with_shift(CursorMove::End, shift);
                 false
             }
 
@@ -510,11 +543,7 @@ impl<'a> TextArea<'a> {
             }
 
             Input {
-                key: Key::Char(c),
-                ctrl: false,
-                alt: false,
-                shift: false,
-                ..
+                key: Key::Char(c), ..
             } => {
                 self.insert_char(c);
                 true
@@ -1349,7 +1378,7 @@ impl<'a> TextArea<'a> {
     /// textarea.start_selection();
     /// textarea.move_cursor(CursorMove::WordForward);
     /// textarea.copy();
-    /// assert_eq!(textarea.yank_text(), "aaa ");
+    /// assert_eq!(textarea.yank_text(), "aaa");
     /// ```
     pub fn start_selection(&mut self) {
         self.selection_start = Some(self.cursor);
@@ -1367,9 +1396,9 @@ impl<'a> TextArea<'a> {
     /// // Cancel the ongoing text selection
     /// textarea.cancel_selection();
     ///
-    /// // As the result, this `copy` call does nothing
+    /// // As the result, this `copy` call copies the whole line when no selection
     /// textarea.copy();
-    /// assert_eq!(textarea.yank_text(), "");
+    /// assert_eq!(textarea.yank_text(), "aaa bbb ccc");
     /// ```
     pub fn cancel_selection(&mut self) {
         self.selection_start = None;
@@ -1484,7 +1513,7 @@ impl<'a> TextArea<'a> {
     /// textarea.move_cursor(CursorMove::End);
     /// textarea.copy();
     ///
-    /// assert_eq!(textarea.yank_text(), "World");
+    /// assert_eq!(textarea.yank_text(), " World");
     /// assert_eq!(textarea.lines(), ["Hello World"]); // Text does not change
     /// ```
     pub fn copy(&mut self) {
@@ -1499,6 +1528,9 @@ impl<'a> TextArea<'a> {
             chunk.extend(self.lines[start.row + 1..end.row].iter().cloned());
             chunk.push(self.lines[end.row][..end.offset].to_string());
             self.yank = YankText::Chunk(chunk);
+        } else {
+            let (row, _) = self.cursor;
+            self.yank = self.lines[row].clone().into();
         }
     }
 
@@ -1601,7 +1633,13 @@ impl<'a> TextArea<'a> {
         }
     }
 
-    pub(crate) fn line_spans<'b>(&'b self, line: &'b str, row: usize, lnum_len: u8) -> Line<'b> {
+    pub(crate) fn line_spans<'b>(
+        &'b self,
+        cursor_row: usize,
+        line: &'b str,
+        row: usize,
+        lnum_len: u8,
+    ) -> Line<'b> {
         let mut hl = LineHighlighter::new(
             line,
             self.cursor_style,
@@ -1611,7 +1649,11 @@ impl<'a> TextArea<'a> {
         );
 
         if let Some(style) = self.line_number_style {
-            hl.line_number(row, lnum_len, style);
+            if cursor_row != row {
+                hl.line_number(row, lnum_len, style.add_modifier(Modifier::DIM));
+            } else {
+                hl.line_number(row, lnum_len, style);
+            }
         }
 
         if row == self.cursor.0 {
