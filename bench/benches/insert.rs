@@ -39,7 +39,7 @@ fn random_lorem(repeat: usize) -> usize {
 
     for _ in 0..repeat {
         for line in LOREM {
-            let row = rng.gen_range(0..textarea.lines().len() as u16);
+            let row = rng.gen_range(0..textarea.lines().len() as u64);
             textarea.move_cursor(CursorMove::Jump(row, 0));
             textarea.move_cursor(CursorMove::End);
 

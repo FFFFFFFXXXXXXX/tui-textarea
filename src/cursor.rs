@@ -190,7 +190,7 @@ pub enum CursorMove {
     /// textarea.move_cursor(CursorMove::Jump(10,  10));
     /// assert_eq!(textarea.cursor(), (2, 4));
     /// ```
-    Jump(u16, u16),
+    Jump(u64, u64),
     /// Move cursor to keep it within the viewport. For example, when a viewport displays line 8 to line 16:
     ///
     /// - cursor at line 4 is moved to line 8
