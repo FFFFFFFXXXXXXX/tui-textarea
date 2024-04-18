@@ -110,11 +110,14 @@ impl<'a> Widget for Renderer<'a> {
         let (row, col) = self.0.cursor();
         let (top_row, top_col) = self.0.viewport.scroll_top();
         let top_row = next_scroll_top(top_row, row as u64, height.into());
-        let top_col = next_scroll_top(
-            top_col,
-            col as u64,
-            u64::from(width) - (u64::from(num_digits(row)) + 1),
-        );
+
+        let line_number_offset = if self.0.line_number_style().is_some() {
+            u64::from(num_digits(row)) + 1
+        } else {
+            0
+        };
+
+        let top_col = next_scroll_top(top_col, col as u64, u64::from(width) - line_number_offset);
 
         let (text, style) = if !self.0.placeholder.is_empty() && self.0.is_empty() {
             (self.placeholder_text(), self.0.placeholder_style)

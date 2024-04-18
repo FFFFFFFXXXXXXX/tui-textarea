@@ -98,7 +98,7 @@ name = "tuirs_termion"
 required-features = ["tuirs-termion"]
 
 [workspace]
-members = ["bench"]
+members = ["bench", "ded"]
 
 [profile.bench]
 lto = "thin"
