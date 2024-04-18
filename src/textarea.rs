@@ -1567,6 +1567,8 @@ impl<'a> TextArea<'a> {
                 self.cancel_selection();
             }
             self.cursor = cursor;
+        } else if !shift {
+            self.cancel_selection();
         }
     }
 
