@@ -98,6 +98,7 @@ pub struct TextArea<'a> {
     mask: Option<char>,
     selection_start: Option<(usize, usize)>,
     select_style: Style,
+    fullscreen: bool,
 }
 
 /// Convert any iterator whose elements can be converted into [`String`] into [`TextArea`]. Each [`String`] element is
@@ -203,6 +204,7 @@ impl<'a> TextArea<'a> {
             mask: None,
             selection_start: None,
             select_style: Style::default().bg(Color::LightBlue),
+            fullscreen: false,
         }
     }
 
@@ -539,6 +541,21 @@ impl<'a> TextArea<'a> {
             } => {
                 self.scroll_with_shift(Scrolling::PageUp, shift);
                 false
+            }
+
+            Input {
+                key: Key::F(11), ..
+            } => {
+                self.fullscreen = !self.fullscreen;
+                true
+            }
+            Input {
+                key: Key::F(12), ..
+            } => {
+                if self.line_number_style.take().is_none() {
+                    self.line_number_style = Some(Style::default().fg(Color::DarkGray));
+                }
+                true
             }
 
             Input {
@@ -1650,10 +1667,10 @@ impl<'a> TextArea<'a> {
         );
 
         if let Some(style) = self.line_number_style {
-            if cursor_row != row {
-                hl.line_number(row, lnum_len, style.add_modifier(Modifier::DIM));
-            } else {
+            if cursor_row == row {
                 hl.line_number(row, lnum_len, style);
+            } else {
+                hl.line_number(row, lnum_len, style.add_modifier(Modifier::DIM));
             }
         }
 
@@ -2404,6 +2421,10 @@ impl<'a> TextArea<'a> {
         }
         scrolling.scroll(&mut self.viewport);
         self.move_cursor_with_shift(CursorMove::InViewport, shift);
+    }
+
+    pub fn is_fullscreen(&self) -> bool {
+        self.fullscreen
     }
 }
 

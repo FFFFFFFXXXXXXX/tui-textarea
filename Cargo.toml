@@ -103,7 +103,7 @@ required-features = ["tuirs-termion"]
 
 [workspace]
 members = [
-    "bench",
+    "bench", "ded",
 ]
 
 [profile.bench]
