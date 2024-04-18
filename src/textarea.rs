@@ -340,6 +340,12 @@ impl<'a> TextArea<'a> {
                 ..
             } => self.delete_next_char(),
             Input {
+                key: Key::Char('K'),
+                ctrl: true,
+                alt: false,
+                shift: true,
+            } => self.delete_line(false),
+            Input {
                 key: Key::Char('k'),
                 ctrl: true,
                 alt: false,
@@ -351,12 +357,6 @@ impl<'a> TextArea<'a> {
                 alt: false,
                 shift: false,
             } => self.delete_line_by_head(),
-            Input {
-                key: Key::Char('K'),
-                ctrl: true,
-                alt: false,
-                shift: true,
-            } => self.delete_line(false),
 
             Input {
                 key: Key::Char('a'),
@@ -369,15 +369,6 @@ impl<'a> TextArea<'a> {
             }
 
             Input {
-                key: Key::Down,
-                ctrl: false,
-                alt: false,
-                shift,
-            } => {
-                self.move_cursor_with_shift(CursorMove::Down, shift);
-                false
-            }
-            Input {
                 key: Key::Up,
                 ctrl: false,
                 alt: false,
@@ -387,12 +378,12 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Right,
+                key: Key::Down,
                 ctrl: false,
                 alt: false,
                 shift,
             } => {
-                self.move_cursor_with_shift(CursorMove::Forward, shift);
+                self.move_cursor_with_shift(CursorMove::Down, shift);
                 false
             }
             Input {
@@ -404,23 +395,23 @@ impl<'a> TextArea<'a> {
                 self.move_cursor_with_shift(CursorMove::Back, shift);
                 false
             }
-
             Input {
                 key: Key::Right,
-                ctrl: true,
+                ctrl: false,
                 alt: false,
                 shift,
             } => {
-                self.move_cursor_with_shift(CursorMove::WordForward, shift);
+                self.move_cursor_with_shift(CursorMove::Forward, shift);
                 false
             }
+
             Input {
-                key: Key::Left,
+                key: Key::Up,
                 ctrl: true,
                 alt: false,
                 shift,
             } => {
-                self.move_cursor_with_shift(CursorMove::WordBack, shift);
+                self.move_cursor_with_shift(CursorMove::ParagraphBack, shift);
                 false
             }
             Input {
@@ -433,12 +424,21 @@ impl<'a> TextArea<'a> {
                 false
             }
             Input {
-                key: Key::Up,
+                key: Key::Left,
                 ctrl: true,
                 alt: false,
                 shift,
             } => {
-                self.move_cursor_with_shift(CursorMove::ParagraphBack, shift);
+                self.move_cursor_with_shift(CursorMove::WordBack, shift);
+                false
+            }
+            Input {
+                key: Key::Right,
+                ctrl: true,
+                alt: false,
+                shift,
+            } => {
+                self.move_cursor_with_shift(CursorMove::WordForward, shift);
                 false
             }
 
