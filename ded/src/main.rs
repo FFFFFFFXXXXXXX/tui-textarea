@@ -191,7 +191,6 @@ impl<'a> Editor<'a> {
             .constraints([Constraint::Length(search_height), Constraint::Min(1)]);
 
         self.term.draw(|f| {
-            _ = std::fs::write("out.txt", format!("{}", f.size()));
             let buffer = &self.buffers[self.current];
             let textarea = &buffer.textarea;
 
