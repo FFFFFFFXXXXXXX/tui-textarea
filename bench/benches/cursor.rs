@@ -14,8 +14,8 @@ impl Restore {
     fn cursor_move(self) -> Option<CursorMove> {
         match self {
             Self::TopLeft => Some(CursorMove::Jump(0, 0)),
-            Self::BottomLeft => Some(CursorMove::Jump(u16::MAX, 0)),
-            Self::BottomRight => Some(CursorMove::Jump(u16::MAX, u16::MAX)),
+            Self::BottomLeft => Some(CursorMove::Jump(u64::MAX, 0)),
+            Self::BottomRight => Some(CursorMove::Jump(u64::MAX, u64::MAX)),
             Self::None => None,
         }
     }

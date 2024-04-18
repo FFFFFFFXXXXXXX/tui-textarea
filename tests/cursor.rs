@@ -1,6 +1,6 @@
 use tui_textarea::{CursorMove, TextArea};
 
-const BOTTOM_RIGHT: CursorMove = CursorMove::Jump(u16::MAX, u16::MAX);
+const BOTTOM_RIGHT: CursorMove = CursorMove::Jump(u64::MAX, u64::MAX);
 
 #[test]
 fn empty_textarea() {
@@ -22,7 +22,7 @@ fn empty_textarea() {
         ParagraphForward,
         ParagraphBack,
         Jump(0, 0),
-        Jump(u16::MAX, u16::MAX),
+        Jump(u64::MAX, u64::MAX),
     ] {
         t.move_cursor(m);
         assert_eq!(t.cursor(), (0, 0), "{:?}", m);
@@ -119,7 +119,7 @@ fn up() {
         for col in 0..=3 {
             let mut row = 2;
 
-            t.move_cursor(CursorMove::Jump(2, col as u16));
+            t.move_cursor(CursorMove::Jump(2, col as u64));
             assert_eq!(t.cursor(), (row, col), "{:?}", t.lines());
 
             while row > 0 {
@@ -155,7 +155,7 @@ fn down() {
         for col in 0..=3 {
             let mut row = 0;
 
-            t.move_cursor(CursorMove::Jump(0, col as u16));
+            t.move_cursor(CursorMove::Jump(0, col as u64));
             assert_eq!(t.cursor(), (row, col), "{:?}", t.lines());
 
             while row < 2 {
@@ -187,7 +187,7 @@ fn head() {
         for row in 0..t.lines().len() {
             let len = t.lines()[row].len();
             for col in [0, len / 2, len] {
-                t.move_cursor(CursorMove::Jump(row as u16, col as u16));
+                t.move_cursor(CursorMove::Jump(row as u64, col as u64));
                 t.move_cursor(CursorMove::Head);
                 assert_eq!(t.cursor(), (row, 0), "{:?}", t.lines());
             }
@@ -207,7 +207,7 @@ fn end() {
                 _ => unreachable!(),
             };
             for col in [0, len / 2, len] {
-                t.move_cursor(CursorMove::Jump(row as u16, col as u16));
+                t.move_cursor(CursorMove::Jump(row as u64, col as u64));
                 t.move_cursor(CursorMove::End);
                 assert_eq!(t.cursor(), (row, len), "{:?}", t.lines());
             }
@@ -241,7 +241,7 @@ fn top_trim() {
         &["", "犬"][..],
     ] {
         let mut t: TextArea = lines.iter().cloned().collect();
-        t.move_cursor(CursorMove::Jump(u16::MAX, u16::MAX));
+        t.move_cursor(CursorMove::Jump(u64::MAX, u64::MAX));
         t.move_cursor(CursorMove::Top);
         let col = t.lines()[0].chars().count();
         assert_eq!(t.cursor(), (0, col), "{:?}", t.lines());
@@ -274,7 +274,7 @@ fn bottom_trim() {
         &["犬", ""][..],
     ] {
         let mut t: TextArea = lines.iter().cloned().collect();
-        t.move_cursor(CursorMove::Jump(0, u16::MAX));
+        t.move_cursor(CursorMove::Jump(0, u64::MAX));
         t.move_cursor(CursorMove::Bottom);
         let col = t.lines().last().unwrap().chars().count();
         assert_eq!(t.cursor(), (t.lines().len() - 1, col), "{:?}", t.lines());

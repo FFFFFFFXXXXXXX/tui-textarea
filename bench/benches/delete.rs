@@ -13,7 +13,7 @@ enum Kind {
 fn run(textarea: &TextArea<'_>, kind: Kind) {
     let mut term = dummy_terminal();
     let mut t = textarea.clone();
-    t.move_cursor(CursorMove::Jump(u16::MAX, u16::MAX));
+    t.move_cursor(CursorMove::Jump(u64::MAX, u64::MAX));
     for _ in 0..100 {
         let modified = match kind {
             Kind::Char => t.delete_char(),
@@ -22,7 +22,7 @@ fn run(textarea: &TextArea<'_>, kind: Kind) {
         };
         if !modified {
             t = textarea.clone();
-            t.move_cursor(CursorMove::Jump(u16::MAX, u16::MAX));
+            t.move_cursor(CursorMove::Jump(u64::MAX, u64::MAX));
         }
         term.draw_textarea(&t);
     }

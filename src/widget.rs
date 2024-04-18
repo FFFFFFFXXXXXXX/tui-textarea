@@ -6,50 +6,44 @@ use crate::textarea::TextArea;
 use crate::util::num_digits;
 #[cfg(feature = "ratatui")]
 use ratatui::text::Line;
+use std::cell::Cell;
 use std::cmp;
-use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(feature = "tuirs")]
 use tui::text::Spans as Line;
 
-// &mut 'a (u16, u16, u16, u16) is not available since Renderer instance totally takes over the ownership of TextArea
-// instance. In the case, the TextArea instance cannot be accessed from any other objects since it is mutablly
-// borrowed.
-//
-// `tui::terminal::Frame::render_stateful_widget` would be an assumed way to render a stateful widget. But at this
-// point we stick with using `tui::terminal::Frame::render_widget` because it is simpler API. Users don't need to
-// manage states of textarea instances separately.
-// https://docs.rs/tui/latest/tui/terminal/struct.Frame.html#method.render_stateful_widget
-#[derive(Default, Debug)]
-pub struct Viewport(AtomicU64);
-
-impl Clone for Viewport {
-    fn clone(&self) -> Self {
-        let u = self.0.load(Ordering::Relaxed);
-        Viewport(AtomicU64::new(u))
-    }
+#[derive(Default, Debug, Clone)]
+pub struct Viewport {
+    width: Cell<u16>,
+    height: Cell<u16>,
+    row: Cell<u64>,
+    col: Cell<u64>,
 }
 
 impl Viewport {
-    pub fn scroll_top(&self) -> (u16, u16) {
-        let u = self.0.load(Ordering::Relaxed);
-        let row = (u >> 16) as u16;
-        let col = u as u16;
-        (row, col)
+    fn store(&self, row: u64, col: u64, width: u16, height: u16) {
+        self.width.set(width);
+        self.height.set(height);
+        self.row.set(row);
+        self.col.set(col);
     }
 
-    pub fn rect(&self) -> (u16, u16, u16, u16) {
-        let u = self.0.load(Ordering::Relaxed);
-        let width = (u >> 48) as u16;
-        let height = (u >> 32) as u16;
-        let row = (u >> 16) as u16;
-        let col = u as u16;
-        (row, col, width, height)
+    pub fn scroll_top(&self) -> (u64, u64) {
+        (self.row.get(), self.col.get())
     }
 
-    pub fn position(&self) -> (u16, u16, u16, u16) {
+    pub fn rect(&self) -> (u64, u64, u16, u16) {
+        (
+            self.row.get(),
+            self.col.get(),
+            self.width.get(),
+            self.height.get(),
+        )
+    }
+
+    pub fn position(&self) -> (u64, u64, u64, u64) {
         let (row_top, col_top, width, height) = self.rect();
-        let row_bottom = row_top.saturating_add(height).saturating_sub(1);
-        let col_bottom = col_top.saturating_add(width).saturating_sub(1);
+        let row_bottom = row_top.saturating_add(height.into()).saturating_sub(1);
+        let col_bottom = col_top.saturating_add(width.into()).saturating_sub(1);
 
         (
             row_top,
@@ -59,24 +53,9 @@ impl Viewport {
         )
     }
 
-    fn store(&self, row: u16, col: u16, width: u16, height: u16) {
-        // Pack four u16 values into one u64 value
-        let u =
-            ((width as u64) << 48) | ((height as u64) << 32) | ((row as u64) << 16) | col as u64;
-        self.0.store(u, Ordering::Relaxed);
-    }
-
-    pub fn scroll(&mut self, rows: i16, cols: i16) {
-        let u = self.0.get_mut();
-        let row = {
-            let pos = (*u >> 16) as u16;
-            pos.saturating_add_signed(rows)
-        };
-        let col = {
-            let pos = *u as u16;
-            pos.saturating_add_signed(cols)
-        };
-        *u = (*u & 0xffff_ffff_0000_0000) | ((row as u64) << 16) | (col as u64);
+    pub fn scroll(&mut self, rows: i64, cols: i64) {
+        self.row.set(self.row.get().saturating_add_signed(rows));
+        self.col.set(self.col.get().saturating_add_signed(cols));
     }
 }
 
@@ -118,7 +97,7 @@ impl<'a> Widget for Renderer<'a> {
             area
         };
 
-        fn next_scroll_top(prev_top: u16, cursor: u16, length: u16) -> u16 {
+        fn next_scroll_top(prev_top: u64, cursor: u64, length: u64) -> u64 {
             if cursor < prev_top {
                 cursor
             } else if prev_top + length <= cursor {
@@ -130,8 +109,12 @@ impl<'a> Widget for Renderer<'a> {
 
         let (row, col) = self.0.cursor();
         let (top_row, top_col) = self.0.viewport.scroll_top();
-        let top_row = next_scroll_top(top_row, row as u16, height);
-        let top_col = next_scroll_top(top_col, col as u16, width - (num_digits(row) + 1) as u16);
+        let top_row = next_scroll_top(top_row, row as u64, height.into());
+        let top_col = next_scroll_top(
+            top_col,
+            col as u64,
+            u64::from(width) - (u64::from(num_digits(row)) + 1),
+        );
 
         let (text, style) = if !self.0.placeholder.is_empty() && self.0.is_empty() {
             (self.placeholder_text(), self.0.placeholder_style)
@@ -150,7 +133,7 @@ impl<'a> Widget for Renderer<'a> {
             b.clone().render(area, buf)
         }
         if top_col != 0 {
-            inner = inner.scroll((0, top_col));
+            inner = inner.scroll((0, top_col.try_into().unwrap()));
         }
 
         // Store scroll top position for rendering on the next tick

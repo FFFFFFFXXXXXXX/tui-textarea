@@ -102,7 +102,7 @@ fn test_insert_char() {
 fn test_insert_str_one_line() {
     for i in 0..="ab".len() {
         let mut t = TextArea::from(["ab"]);
-        t.move_cursor(CursorMove::Jump(0, i as u16));
+        t.move_cursor(CursorMove::Jump(0, i as u64));
         assert!(t.insert_str("x"), "{i}");
 
         let mut want = "ab".to_string();
@@ -947,9 +947,9 @@ fn test_copy_single_line() {
         for j in i.."abc".len() {
             let mut t = TextArea::from(["abc"]);
 
-            t.move_cursor(CursorMove::Jump(0, i as u16));
+            t.move_cursor(CursorMove::Jump(0, i as u64));
             t.start_selection();
-            t.move_cursor(CursorMove::Jump(0, j as u16));
+            t.move_cursor(CursorMove::Jump(0, j as u64));
             t.copy();
 
             if (i..j).is_empty() {
@@ -971,9 +971,9 @@ fn test_cut_single_line() {
         for j in i + 1.."abc".len() {
             let mut t = TextArea::from(["abc"]);
 
-            t.move_cursor(CursorMove::Jump(0, i as u16));
+            t.move_cursor(CursorMove::Jump(0, i as u64));
             t.start_selection();
-            t.move_cursor(CursorMove::Jump(0, j as u16));
+            t.move_cursor(CursorMove::Jump(0, j as u64));
             t.delete_line(true);
 
             assert_eq!(t.yank_text(), &"abc"[i..j], "from {i} to {j}");

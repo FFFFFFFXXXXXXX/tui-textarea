@@ -1,6 +1,6 @@
 use crate::widget::Viewport;
 use crate::word::{
-    find_word_end_forward, find_word_inclusive_end_forward, find_word_start_backward, find_word_start_forward,
+    find_word_exclusive_end_forward, find_word_inclusive_end_forward, find_word_start_backward,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::Arbitrary;
@@ -222,7 +222,7 @@ pub enum CursorMove {
     /// textarea.move_cursor(CursorMove::Jump(10,  10));
     /// assert_eq!(textarea.cursor(), (2, 4));
     /// ```
-    Jump(u16, u16),
+    Jump(u64, u64),
     /// Move cursor to keep it within the viewport. For example, when a viewport displays line 8 to line 16:
     ///
     /// - cursor at line 4 is moved to line 8
@@ -311,12 +311,15 @@ impl CursorMove {
             }
             WordForward => {
                 let chars = lines[row].chars().count();
-                if let Some(col) = find_word_end_forward(&lines[row], col) {
+                if let Some(col) = find_word_exclusive_end_forward(&lines[row], col) {
                     Some((row, col))
                 } else if col == chars {
-                    lines
-                        .get(row + 1)
-                        .map(|line| (row + 1, find_word_end_forward(line, 0).unwrap_or(0)))
+                    lines.get(row + 1).map(|line| {
+                        (
+                            row + 1,
+                            find_word_exclusive_end_forward(line, 0).unwrap_or(0),
+                        )
+                    })
                 } else {
                     Some((row, lines[row].chars().count()))
                 }

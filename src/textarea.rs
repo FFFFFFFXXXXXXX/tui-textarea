@@ -1420,7 +1420,7 @@ impl<'a> TextArea<'a> {
     /// assert_eq!(textarea.yank_text(), "aaa\nbbb\nccc");
     /// ```
     pub fn select_all(&mut self) {
-        self.move_cursor(CursorMove::Jump(u16::MAX, u16::MAX));
+        self.move_cursor(CursorMove::Jump(u64::MAX, u64::MAX));
         self.selection_start = Some((0, 0));
     }
 

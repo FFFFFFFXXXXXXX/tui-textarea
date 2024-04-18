@@ -38,7 +38,7 @@ pub enum Scrolling {
     /// textarea.scroll((1, 0));
     /// assert_eq!(textarea.cursor(), (3, 0));
     /// ```
-    Delta { rows: i16, cols: i16 },
+    Delta { rows: i64, cols: i64 },
     /// Scroll down the textarea by one page.
     ///
     /// ```
@@ -159,27 +159,27 @@ impl Scrolling {
             Self::Delta { rows, cols } => (rows, cols),
             Self::PageDown => {
                 let (_, _, _, height) = viewport.rect();
-                (height as i16, 0)
+                (i64::from(height), 0)
             }
             Self::PageUp => {
                 let (_, _, _, height) = viewport.rect();
-                (-(height as i16), 0)
+                (-i64::from(height), 0)
             }
             Self::HalfPageDown => {
                 let (_, _, _, height) = viewport.rect();
-                ((height as i16) / 2, 0)
+                (i64::from(height) / 2, 0)
             }
             Self::HalfPageUp => {
                 let (_, _, _, height) = viewport.rect();
-                (-(height as i16) / 2, 0)
+                (-i64::from(height) / 2, 0)
             }
         };
         viewport.scroll(rows, cols);
     }
 }
 
-impl From<(i16, i16)> for Scrolling {
-    fn from((rows, cols): (i16, i16)) -> Self {
+impl From<(i64, i64)> for Scrolling {
+    fn from((rows, cols): (i64, i64)) -> Self {
         Self::Delta { rows, cols }
     }
 }
