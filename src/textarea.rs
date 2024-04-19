@@ -283,7 +283,10 @@ impl<'a> TextArea<'a> {
                 ctrl: true,
                 alt: false,
                 ..
-            } => self.duplicate_line(),
+            } => {
+                self.duplicate_line();
+                true
+            }
 
             Input {
                 key: Key::Char('\n' | '\r'),
@@ -291,9 +294,7 @@ impl<'a> TextArea<'a> {
                 alt: false,
                 ..
             }
-            | Input {
-                key: Key::Enter, ..
-            } => {
+            | Input { key: Key::Enter, .. } => {
                 self.insert_newline();
                 true
             }
@@ -367,7 +368,7 @@ impl<'a> TextArea<'a> {
                 shift: false,
             } => {
                 self.select_all();
-                true
+                false
             }
 
             Input {
@@ -463,19 +464,11 @@ impl<'a> TextArea<'a> {
                 false
             }
 
-            Input {
-                key: Key::Home,
-                shift,
-                ..
-            } => {
+            Input { key: Key::Home, shift, .. } => {
                 self.move_cursor_with_shift(CursorMove::Head, shift);
                 false
             }
-            Input {
-                key: Key::End,
-                shift,
-                ..
-            } => {
+            Input { key: Key::End, shift, .. } => {
                 self.move_cursor_with_shift(CursorMove::End, shift);
                 false
             }
@@ -506,9 +499,7 @@ impl<'a> TextArea<'a> {
                 alt: false,
                 ..
             }
-            | Input {
-                key: Key::Paste, ..
-            } => self.paste(),
+            | Input { key: Key::Paste, .. } => self.paste(),
             Input {
                 key: Key::Char('x'),
                 ctrl: true,
@@ -527,41 +518,27 @@ impl<'a> TextArea<'a> {
                 false
             }
 
-            Input {
-                key: Key::PageDown,
-                shift,
-                ..
-            } => {
+            Input { key: Key::PageDown, shift, .. } => {
                 self.scroll_with_shift(Scrolling::PageDown, shift);
                 false
             }
-            Input {
-                key: Key::PageUp,
-                shift,
-                ..
-            } => {
+            Input { key: Key::PageUp, shift, .. } => {
                 self.scroll_with_shift(Scrolling::PageUp, shift);
                 false
             }
 
-            Input {
-                key: Key::F(11), ..
-            } => {
+            Input { key: Key::F(11), .. } => {
                 self.fullscreen = !self.fullscreen;
-                true
+                false
             }
-            Input {
-                key: Key::F(12), ..
-            } => {
+            Input { key: Key::F(12), .. } => {
                 if self.line_number_style.take().is_none() {
                     self.line_number_style = Some(Style::default().fg(Color::DarkGray));
                 }
-                true
+                false
             }
 
-            Input {
-                key: Key::Char(c), ..
-            } => {
+            Input { key: Key::Char(c), .. } => {
                 self.insert_char(c);
                 true
             }
@@ -619,30 +596,17 @@ impl<'a> TextArea<'a> {
                 alt: false,
                 ..
             } => self.insert_tab(),
-            Input {
-                key: Key::Backspace,
-                ..
-            } => self.delete_char(),
-            Input {
-                key: Key::Delete, ..
-            } => self.delete_next_char(),
-            Input {
-                key: Key::Enter, ..
-            } => {
+            Input { key: Key::Backspace, .. } => self.delete_char(),
+            Input { key: Key::Delete, .. } => self.delete_next_char(),
+            Input { key: Key::Enter, .. } => {
                 self.insert_newline();
                 true
             }
-            Input {
-                key: Key::MouseScrollDown,
-                ..
-            } => {
+            Input { key: Key::MouseScrollDown, .. } => {
                 self.scroll((1, 0));
                 false
             }
-            Input {
-                key: Key::MouseScrollUp,
-                ..
-            } => {
+            Input { key: Key::MouseScrollUp, .. } => {
                 self.scroll((-1, 0));
                 false
             }
@@ -680,18 +644,10 @@ impl<'a> TextArea<'a> {
         self.delete_selection(false);
         let (row, col) = self.cursor;
         let line = &mut self.lines[row];
-        let i = line
-            .char_indices()
-            .nth(col)
-            .map(|(i, _)| i)
-            .unwrap_or(line.len());
+        let i = line.char_indices().nth(col).map(|(i, _)| i).unwrap_or(line.len());
         line.insert(i, c);
         self.cursor.1 += 1;
-        self.push_history(
-            EditKind::InsertChar(c),
-            Pos::new(row, col, i),
-            i + c.len_utf8(),
-        );
+        self.push_history(EditKind::InsertChar(c), Pos::new(row, col, i), i + c.len_utf8());
     }
 
     /// Insert a string at current cursor position. This method returns if some text was inserted or not in the textarea.
@@ -726,17 +682,10 @@ impl<'a> TextArea<'a> {
 
         let (row, col) = self.cursor;
         let line = &mut self.lines[row];
-        let i = line
-            .char_indices()
-            .nth(col)
-            .map(|(i, _)| i)
-            .unwrap_or(line.len());
+        let i = line.char_indices().nth(col).map(|(i, _)| i).unwrap_or(line.len());
         let before = Pos::new(row, col, i);
 
-        let (row, col) = (
-            row + chunk.len() - 1,
-            chunk[chunk.len() - 1].chars().count(),
-        );
+        let (row, col) = (row + chunk.len() - 1, chunk[chunk.len() - 1].chars().count());
         self.cursor = (row, col);
 
         let end_offset = chunk.last().unwrap().len();
@@ -761,11 +710,7 @@ impl<'a> TextArea<'a> {
             line,
         );
 
-        let i = line
-            .char_indices()
-            .nth(col)
-            .map(|(i, _)| i)
-            .unwrap_or(line.len());
+        let i = line.char_indices().nth(col).map(|(i, _)| i).unwrap_or(line.len());
         line.insert_str(i, &s);
         let end_offset = i + s.len();
 
@@ -789,10 +734,7 @@ impl<'a> TextArea<'a> {
             return;
         }
 
-        let mut deleted = vec![self.lines[start.row]
-            .drain(start.offset..)
-            .as_str()
-            .to_string()];
+        let mut deleted = vec![self.lines[start.row].drain(start.offset..).as_str().to_string()];
         deleted.extend(self.lines.drain(start.row + 1..end.row));
         if start.row + 1 < self.lines.len() {
             let mut last_line = self.lines.remove(start.row + 1);
@@ -861,12 +803,7 @@ impl<'a> TextArea<'a> {
         };
 
         let line = &self.lines[start_row];
-        let start_offset = {
-            line.char_indices()
-                .nth(start_col)
-                .map(|(i, _)| i)
-                .unwrap_or(line.len())
-        };
+        let start_offset = { line.char_indices().nth(start_col).map(|(i, _)| i).unwrap_or(line.len()) };
 
         // First line
         if let Some((offset_delta, col_delta)) = find_end(&line[start_offset..]) {
@@ -968,11 +905,7 @@ impl<'a> TextArea<'a> {
         }
 
         let (row, col) = self.cursor;
-        let width: usize = self.lines[row]
-            .chars()
-            .take(col)
-            .map(|c| c.width().unwrap_or(0))
-            .sum();
+        let width: usize = self.lines[row].chars().take(col).map(|c| c.width().unwrap_or(0)).sum();
         let len = self.tab_len - (width % self.tab_len as usize) as u8;
         self.insert_piece(spaces(len).to_string())
     }
@@ -1055,7 +988,7 @@ impl<'a> TextArea<'a> {
     /// textarea.delete_tab_from_head();
     /// assert_eq!(textarea.lines(), ["\thi"]);
     /// ```
-    pub fn duplicate_line(&mut self) -> bool {
+    pub fn duplicate_line(&mut self) {
         self.cancel_selection();
 
         let (row, col) = self.cursor;
@@ -1065,8 +998,6 @@ impl<'a> TextArea<'a> {
             Pos::new(row, col, 0),
             Pos::new(row + 1, col, 0),
         ));
-
-        true
     }
 
     /// Insert a newline at current cursor position.
@@ -1084,11 +1015,7 @@ impl<'a> TextArea<'a> {
 
         let (row, col) = self.cursor;
         let line = &mut self.lines[row];
-        let offset = line
-            .char_indices()
-            .nth(col)
-            .map(|(i, _)| i)
-            .unwrap_or(line.len());
+        let offset = line.char_indices().nth(col).map(|(i, _)| i).unwrap_or(line.len());
         let next_line = line[offset..].to_string();
         line.truncate(offset);
 
@@ -1458,14 +1385,8 @@ impl<'a> TextArea<'a> {
     }
 
     fn line_offset(&self, row: usize, col: usize) -> usize {
-        let line = self
-            .lines
-            .get(row)
-            .unwrap_or(&self.lines[self.lines.len() - 1]);
-        line.char_indices()
-            .nth(col)
-            .map(|(i, _)| i)
-            .unwrap_or(line.len())
+        let line = self.lines.get(row).unwrap_or(&self.lines[self.lines.len() - 1]);
+        line.char_indices().nth(col).map(|(i, _)| i).unwrap_or(line.len())
     }
 
     /// Set the style used for text selection. The default style is light blue.
@@ -1536,9 +1457,7 @@ impl<'a> TextArea<'a> {
     pub fn copy(&mut self) {
         if let Some((start, end)) = self.take_selection_range() {
             if start.row == end.row {
-                self.yank = self.lines[start.row][start.offset..end.offset]
-                    .to_string()
-                    .into();
+                self.yank = self.lines[start.row][start.offset..end.offset].to_string().into();
                 return;
             }
             let mut chunk = vec![self.lines[start.row][start.offset..].to_string()];
@@ -1652,20 +1571,8 @@ impl<'a> TextArea<'a> {
         }
     }
 
-    pub(crate) fn line_spans<'b>(
-        &'b self,
-        cursor_row: usize,
-        line: &'b str,
-        row: usize,
-        lnum_len: u8,
-    ) -> Line<'b> {
-        let mut hl = LineHighlighter::new(
-            line,
-            self.cursor_style,
-            self.tab_len,
-            self.mask,
-            self.select_style,
-        );
+    pub(crate) fn line_spans<'b>(&'b self, cursor_row: usize, line: &'b str, row: usize, lnum_len: u8) -> Line<'b> {
+        let mut hl = LineHighlighter::new(line, self.cursor_style, self.tab_len, self.mask, self.select_style);
 
         if let Some(style) = self.line_number_style {
             if cursor_row == row {
