@@ -519,11 +519,11 @@ impl<'a> TextArea<'a> {
             }
 
             Input { key: Key::PageDown, shift, .. } => {
-                self.scroll_with_shift(Scrolling::PageDown, shift);
+                self.scroll_to_end(shift);
                 false
             }
             Input { key: Key::PageUp, shift, .. } => {
-                self.scroll_with_shift(Scrolling::PageUp, shift);
+                self.scroll_to_start(shift);
                 false
             }
 
@@ -2329,6 +2329,22 @@ impl<'a> TextArea<'a> {
         }
         scrolling.scroll(&mut self.viewport);
         self.move_cursor_with_shift(CursorMove::InViewport, shift);
+    }
+
+    fn scroll_to_start(&mut self, shift: bool) {
+        if shift && self.selection_start.is_none() {
+            self.selection_start = Some(self.cursor);
+        }
+
+        self.move_cursor_with_shift(CursorMove::Top, shift);
+    }
+
+    fn scroll_to_end(&mut self, shift: bool) {
+        if shift && self.selection_start.is_none() {
+            self.selection_start = Some(self.cursor);
+        }
+
+        self.move_cursor_with_shift(CursorMove::Bottom, shift);
     }
 
     pub fn is_fullscreen(&self) -> bool {
