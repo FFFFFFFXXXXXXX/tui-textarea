@@ -17,10 +17,7 @@ impl Default for Search {
 }
 
 impl Search {
-    pub fn matches<'a>(
-        &'a self,
-        line: &'a str,
-    ) -> Option<impl Iterator<Item = (usize, usize)> + 'a> {
+    pub fn matches<'a>(&'a self, line: &'a str) -> Option<impl Iterator<Item = (usize, usize)> + 'a> {
         let pat = self.pat.as_ref()?;
         let matches = pat.find_iter(line).map(|m| (m.start(), m.end()));
         Some(matches)
@@ -35,12 +32,7 @@ impl Search {
         Ok(())
     }
 
-    pub fn forward(
-        &mut self,
-        lines: &[String],
-        cursor: (usize, usize),
-        match_cursor: bool,
-    ) -> Option<(usize, usize)> {
+    pub fn forward(&mut self, lines: &[String], cursor: (usize, usize), match_cursor: bool) -> Option<(usize, usize)> {
         let pat = if let Some(pat) = &self.pat {
             pat
         } else {
@@ -91,12 +83,7 @@ impl Search {
         None
     }
 
-    pub fn back(
-        &mut self,
-        lines: &[String],
-        cursor: (usize, usize),
-        match_cursor: bool,
-    ) -> Option<(usize, usize)> {
+    pub fn back(&mut self, lines: &[String], cursor: (usize, usize), match_cursor: bool) -> Option<(usize, usize)> {
         let pat = if let Some(pat) = &self.pat {
             pat
         } else {
@@ -109,11 +96,7 @@ impl Search {
         if col > 0 || match_cursor {
             let start_col = if match_cursor { col } else { col - 1 };
             if let Some((i, _)) = current_line.char_indices().nth(start_col) {
-                if let Some(m) = pat
-                    .find_iter(current_line)
-                    .take_while(|m| m.start() <= i)
-                    .last()
-                {
+                if let Some(m) = pat.find_iter(current_line).take_while(|m| m.start() <= i).last() {
                     let col = current_line[..m.start()].chars().count();
                     return Some((row, col));
                 }
@@ -138,11 +121,7 @@ impl Search {
 
         // Search current line after cursor
         if let Some((i, _)) = current_line.char_indices().nth(col) {
-            if let Some(m) = pat
-                .find_iter(current_line)
-                .skip_while(|m| m.start() < i)
-                .last()
-            {
+            if let Some(m) = pat.find_iter(current_line).skip_while(|m| m.start() < i).last() {
                 let col = col + current_line[i..m.start()].chars().count();
                 return Some((row, col));
             }

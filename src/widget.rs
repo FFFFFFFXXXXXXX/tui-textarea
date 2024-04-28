@@ -32,12 +32,7 @@ impl Viewport {
     }
 
     pub fn rect(&self) -> (u64, u64, u16, u16) {
-        (
-            self.row.get(),
-            self.col.get(),
-            self.width.get(),
-            self.height.get(),
-        )
+        (self.row.get(), self.col.get(), self.width.get(), self.height.get())
     }
 
     pub fn position(&self) -> (u64, u64, u64, u64) {
@@ -128,9 +123,7 @@ impl<'a> Widget for Renderer<'a> {
         // To get fine control over the text color and the surrrounding block they have to be rendered separately
         // see https://github.com/ratatui-org/ratatui/issues/144
         let mut text_area = area;
-        let mut inner = Paragraph::new(text)
-            .style(style)
-            .alignment(self.0.alignment());
+        let mut inner = Paragraph::new(text).style(style).alignment(self.0.alignment());
         if let Some(b) = self.0.block() {
             text_area = b.inner(area);
             b.clone().render(area, buf)

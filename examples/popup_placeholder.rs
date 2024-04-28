@@ -1,7 +1,5 @@
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
@@ -49,11 +47,7 @@ fn main() -> io::Result<()> {
     }
 
     disable_raw_mode()?;
-    crossterm::execute!(
-        term.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
+    crossterm::execute!(term.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
     term.show_cursor()?;
 
     println!("Lines: {:?}", textarea.lines());

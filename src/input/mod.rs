@@ -125,12 +125,7 @@ mod tests {
 
     #[allow(dead_code)]
     pub(crate) fn input(key: Key, ctrl: bool, alt: bool, shift: bool) -> Input {
-        Input {
-            key,
-            ctrl,
-            alt,
-            shift,
-        }
+        Input { key, ctrl, alt, shift }
     }
 
     #[test]

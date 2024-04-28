@@ -88,11 +88,7 @@ fn test_insert_char() {
         t.move_cursor(CursorMove::Jump(0, col));
         t.insert_char(ch);
         assert_eq!(t.lines(), want, "{test:?}");
-        let pos = if ch == '\n' {
-            (1, 0)
-        } else {
-            (0, col as usize + 1)
-        };
+        let pos = if ch == '\n' { (1, 0) } else { (0, col as usize + 1) };
         assert_eq!(t.cursor(), pos, "{test:?}");
         assert_undo_redo((0, col as _), &["ab"], want, &mut t, test);
     }

@@ -62,10 +62,7 @@ impl EditKind {
                 debug_assert!(c.len() > 1, "Chunk size must be > 1: {:?}", c);
 
                 // Remove middle lines of chunk
-                let mut last_line = lines
-                    .drain(after.row + 1..after.row + c.len())
-                    .last()
-                    .unwrap();
+                let mut last_line = lines.drain(after.row + 1..after.row + c.len()).last().unwrap();
                 // Remove last line of chunk
                 last_line.drain(..c[c.len() - 1].len());
 
@@ -117,11 +114,7 @@ pub struct Edit {
 
 impl Edit {
     pub fn new(kind: EditKind, before: Pos, after: Pos) -> Self {
-        Self {
-            kind,
-            before,
-            after,
-        }
+        Self { kind, before, after }
     }
 
     pub fn redo(&self, lines: &mut Vec<String>) {

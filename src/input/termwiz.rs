@@ -1,7 +1,5 @@
 use super::{Input, Key};
-use termwiz::input::{
-    InputEvent, KeyCode, KeyEvent, Modifiers, MouseButtons, MouseEvent, PixelMouseEvent,
-};
+use termwiz::input::{InputEvent, KeyCode, KeyEvent, Modifiers, MouseButtons, MouseEvent, PixelMouseEvent};
 
 impl From<InputEvent> for Input {
     /// Convert [`termwiz::input::InputEvent`] into [`Input`].
@@ -51,12 +49,7 @@ impl From<KeyEvent> for Input {
         let alt = modifiers.contains(Modifiers::ALT);
         let shift = modifiers.contains(Modifiers::SHIFT);
 
-        Self {
-            key,
-            ctrl,
-            alt,
-            shift,
-        }
+        Self { key, ctrl, alt, shift }
     }
 }
 
@@ -78,45 +71,27 @@ impl From<MouseButtons> for Key {
 impl From<MouseEvent> for Input {
     /// Convert [`termwiz::input::MouseEvent`] into [`Input`].
     fn from(mouse: MouseEvent) -> Self {
-        let MouseEvent {
-            mouse_buttons,
-            modifiers,
-            ..
-        } = mouse;
+        let MouseEvent { mouse_buttons, modifiers, .. } = mouse;
         let key = Key::from(mouse_buttons);
         let ctrl = modifiers.contains(Modifiers::CTRL);
         let alt = modifiers.contains(Modifiers::ALT);
         let shift = modifiers.contains(Modifiers::SHIFT);
 
-        Self {
-            key,
-            ctrl,
-            alt,
-            shift,
-        }
+        Self { key, ctrl, alt, shift }
     }
 }
 
 impl From<PixelMouseEvent> for Input {
     /// Convert [`termwiz::input::PixelMouseEvent`] into [`Input`].
     fn from(mouse: PixelMouseEvent) -> Self {
-        let PixelMouseEvent {
-            mouse_buttons,
-            modifiers,
-            ..
-        } = mouse;
+        let PixelMouseEvent { mouse_buttons, modifiers, .. } = mouse;
 
         let key = Key::from(mouse_buttons);
         let ctrl = modifiers.contains(Modifiers::CTRL);
         let alt = modifiers.contains(Modifiers::ALT);
         let shift = modifiers.contains(Modifiers::SHIFT);
 
-        Self {
-            key,
-            ctrl,
-            alt,
-            shift,
-        }
+        Self { key, ctrl, alt, shift }
     }
 }
 
@@ -243,16 +218,10 @@ mod tests {
                 input(Key::MouseScrollDown, false, false, false),
             ),
             (
-                InputEvent::PixelMouse(pixel_mouse_event(
-                    MouseButtons::VERT_WHEEL,
-                    Modifiers::empty(),
-                )),
+                InputEvent::PixelMouse(pixel_mouse_event(MouseButtons::VERT_WHEEL, Modifiers::empty())),
                 input(Key::MouseScrollDown, false, false, false),
             ),
-            (
-                InputEvent::Paste("x".into()),
-                input(Key::Null, false, false, false),
-            ),
+            (InputEvent::Paste("x".into()), input(Key::Null, false, false, false)),
         ] {
             assert_eq!(Input::from(from.clone()), to, "{:?} -> {:?}", from, to);
         }

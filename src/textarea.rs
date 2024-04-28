@@ -527,14 +527,18 @@ impl<'a> TextArea<'a> {
                 false
             }
 
-            Input { key: Key::F(11), .. } => {
-                self.fullscreen = !self.fullscreen;
-                false
-            }
-            Input { key: Key::F(12), .. } => {
-                if self.line_number_style.take().is_none() {
-                    self.line_number_style = Some(Style::default().fg(Color::DarkGray));
-                }
+            Input {
+                key: key @ (Key::Up | Key::Down),
+                ctrl: false,
+                alt: true,
+                shift: true,
+            } => {
+                let rows = match key {
+                    Key::Up => -1,
+                    Key::Down => 1,
+                    _ => 0,
+                };
+                self.viewport.scroll(rows, 0);
                 false
             }
 
@@ -590,26 +594,8 @@ impl<'a> TextArea<'a> {
                 self.insert_char(c);
                 true
             }
-            Input {
-                key: Key::Tab,
-                ctrl: false,
-                alt: false,
-                ..
-            } => self.insert_tab(),
             Input { key: Key::Backspace, .. } => self.delete_char(),
             Input { key: Key::Delete, .. } => self.delete_next_char(),
-            Input { key: Key::Enter, .. } => {
-                self.insert_newline();
-                true
-            }
-            Input { key: Key::MouseScrollDown, .. } => {
-                self.scroll((1, 0));
-                false
-            }
-            Input { key: Key::MouseScrollUp, .. } => {
-                self.scroll((-1, 0));
-                false
-            }
             _ => false,
         }
     }
@@ -2345,6 +2331,16 @@ impl<'a> TextArea<'a> {
         }
 
         self.move_cursor_with_shift(CursorMove::Bottom, shift);
+    }
+
+    pub fn toggle_line_numbers(&mut self) {
+        if self.line_number_style.take().is_none() {
+            self.line_number_style = Some(Style::default().fg(Color::DarkGray));
+        }
+    }
+
+    pub fn toggle_fullscreen(&mut self) {
+        self.fullscreen = !self.fullscreen;
     }
 
     pub fn is_fullscreen(&self) -> bool {

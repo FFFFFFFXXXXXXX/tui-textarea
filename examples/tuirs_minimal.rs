@@ -1,9 +1,7 @@
 use crossterm_025 as crossterm;
 
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use std::io;
 use tui::backend::CrosstermBackend;
 use tui::widgets::{Block, Borders};
@@ -39,11 +37,7 @@ fn main() -> io::Result<()> {
     }
 
     disable_raw_mode()?;
-    crossterm::execute!(
-        term.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
+    crossterm::execute!(term.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
     term.show_cursor()?;
 
     println!("Lines: {:?}", textarea.lines());

@@ -63,11 +63,7 @@ pub fn find_word_inclusive_end_forward(line: &str, start_col: usize) -> Option<u
 }
 
 pub fn find_word_start_backward(line: &str, start_col: usize) -> Option<usize> {
-    let idx = line
-        .char_indices()
-        .nth(start_col)
-        .map(|(i, _)| i)
-        .unwrap_or(line.len());
+    let idx = line.char_indices().nth(start_col).map(|(i, _)| i).unwrap_or(line.len());
     let mut it = line[..idx].chars().rev().enumerate();
     let mut cur = CharKind::new(it.next()?.1);
     for (i, c) in it {

@@ -44,12 +44,7 @@ impl From<KeyEvent> for Input {
             _ => Key::Null,
         };
 
-        Input {
-            key,
-            ctrl,
-            alt,
-            shift: false,
-        }
+        Input { key, ctrl, alt, shift: false }
     }
 }
 
@@ -89,18 +84,9 @@ mod tests {
     #[test]
     fn key_to_input() {
         for (from, to) in [
-            (
-                KeyEvent::Char('a'),
-                input(Key::Char('a'), false, false, false),
-            ),
-            (
-                KeyEvent::Ctrl('a'),
-                input(Key::Char('a'), true, false, false),
-            ),
-            (
-                KeyEvent::Alt('a'),
-                input(Key::Char('a'), false, true, false),
-            ),
+            (KeyEvent::Char('a'), input(Key::Char('a'), false, false, false)),
+            (KeyEvent::Ctrl('a'), input(Key::Char('a'), true, false, false)),
+            (KeyEvent::Alt('a'), input(Key::Char('a'), false, true, false)),
             (KeyEvent::Char('\n'), input(Key::Enter, false, false, false)),
             (KeyEvent::Char('\r'), input(Key::Enter, false, false, false)),
             (KeyEvent::F(1), input(Key::F(1), false, false, false)),
@@ -126,14 +112,8 @@ mod tests {
                 MouseEvent::Press(MouseButton::Left, 1, 1),
                 input(Key::Null, false, false, false),
             ),
-            (
-                MouseEvent::Release(1, 1),
-                input(Key::Null, false, false, false),
-            ),
-            (
-                MouseEvent::Hold(1, 1),
-                input(Key::Null, false, false, false),
-            ),
+            (MouseEvent::Release(1, 1), input(Key::Null, false, false, false)),
+            (MouseEvent::Hold(1, 1), input(Key::Null, false, false, false)),
         ] {
             assert_eq!(Input::from(from), to, "{:?} -> {:?}", from, to);
         }
@@ -150,10 +130,7 @@ mod tests {
                 Event::Mouse(MouseEvent::Press(MouseButton::WheelDown, 1, 1)),
                 input(Key::MouseScrollDown, false, false, false),
             ),
-            (
-                Event::Unsupported(vec![]),
-                input(Key::Null, false, false, false),
-            ),
+            (Event::Unsupported(vec![]), input(Key::Null, false, false, false)),
         ] {
             assert_eq!(Input::from(from.clone()), to, "{:?} -> {:?}", from, to);
         }

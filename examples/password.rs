@@ -1,7 +1,5 @@
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style};
@@ -36,10 +34,7 @@ fn main() -> io::Result<()> {
         })?;
 
         match crossterm::event::read()?.into() {
-            Input {
-                key: Key::Esc | Key::Enter,
-                ..
-            } => break,
+            Input { key: Key::Esc | Key::Enter, .. } => break,
             input => {
                 if textarea.input(input) {
                     // When the input modified its text, validate the text content
@@ -49,11 +44,7 @@ fn main() -> io::Result<()> {
     }
 
     disable_raw_mode()?;
-    crossterm::execute!(
-        term.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture,
-    )?;
+    crossterm::execute!(term.backend_mut(), LeaveAlternateScreen, DisableMouseCapture,)?;
     term.show_cursor()?;
 
     println!("Input: {:?}", textarea.lines()[0]);

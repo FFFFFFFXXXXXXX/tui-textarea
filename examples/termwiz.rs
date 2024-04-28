@@ -13,11 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     term.hide_cursor()?;
 
     let mut textarea = TextArea::default();
-    textarea.set_block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Termwiz Minimal Example"),
-    );
+    textarea.set_block(Block::default().borders(Borders::ALL).title("Termwiz Minimal Example"));
 
     // The event loop
     loop {
@@ -33,9 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .poll_input(Some(Duration::from_millis(100)))?
         {
             if let InputEvent::Resized { cols, rows } = input {
-                term.backend_mut()
-                    .buffered_terminal_mut()
-                    .resize(cols, rows);
+                term.backend_mut().buffered_terminal_mut().resize(cols, rows);
             } else {
                 match input.into() {
                     Input { key: Key::Esc, .. } => break,
