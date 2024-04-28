@@ -9,12 +9,7 @@ fn test_input_all_combinations_sanity() {
         for ctrl in [true, false] {
             for alt in [true, false] {
                 for shift in [true, false] {
-                    inputs.push(Input {
-                        key,
-                        ctrl,
-                        alt,
-                        shift,
-                    });
+                    inputs.push(Input { key, ctrl, alt, shift });
                 }
             }
         }

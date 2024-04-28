@@ -1,14 +1,12 @@
 use super::{Input, Key};
-use crate::crossterm::event::{
-    Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind,
-};
+use crate::crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind};
 
 impl From<Event> for Input {
     /// Convert [`crossterm::event::Event`] into [`Input`].
     fn from(event: Event) -> Self {
         match event {
             Event::Key(key) => Self::from(key),
-            Event::Mouse(mouse) => Self::from(mouse),
+            // Event::Mouse(mouse) => Self::from(mouse),
             _ => Self::default(),
         }
     }
@@ -53,12 +51,7 @@ impl From<KeyEvent> for Input {
         let shift = key.modifiers.contains(KeyModifiers::SHIFT);
         let key = Key::from(key.code);
 
-        Self {
-            key,
-            ctrl,
-            alt,
-            shift,
-        }
+        Self { key, ctrl, alt, shift }
     }
 }
 
@@ -80,12 +73,7 @@ impl From<MouseEvent> for Input {
         let ctrl = mouse.modifiers.contains(KeyModifiers::CONTROL);
         let alt = mouse.modifiers.contains(KeyModifiers::ALT);
         let shift = mouse.modifiers.contains(KeyModifiers::SHIFT);
-        Self {
-            key,
-            ctrl,
-            alt,
-            shift,
-        }
+        Self { key, ctrl, alt, shift }
     }
 }
 
@@ -172,10 +160,7 @@ mod tests {
                 input(Key::MouseScrollDown, false, true, false),
             ),
             (
-                mouse_event(
-                    MouseEventKind::ScrollUp,
-                    KeyModifiers::CONTROL | KeyModifiers::ALT,
-                ),
+                mouse_event(MouseEventKind::ScrollUp, KeyModifiers::CONTROL | KeyModifiers::ALT),
                 input(Key::MouseScrollUp, true, true, false),
             ),
             (
@@ -195,10 +180,7 @@ mod tests {
                 input(Key::Char('a'), false, false, false),
             ),
             (
-                Event::Mouse(mouse_event(
-                    MouseEventKind::ScrollDown,
-                    KeyModifiers::empty(),
-                )),
+                Event::Mouse(mouse_event(MouseEventKind::ScrollDown, KeyModifiers::empty())),
                 input(Key::MouseScrollDown, false, false, false),
             ),
             (Event::FocusGained, input(Key::Null, false, false, false)),

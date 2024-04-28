@@ -89,37 +89,21 @@ fn append_long_lorem(repeat: usize) -> usize {
 }
 
 fn append(c: &mut Criterion) {
-    c.bench_function("insert::append::1_lorem", |b| {
-        b.iter(|| black_box(append_lorem(1)))
-    });
-    c.bench_function("insert::append::10_lorem", |b| {
-        b.iter(|| black_box(append_lorem(10)))
-    });
-    c.bench_function("insert::append::50_lorem", |b| {
-        b.iter(|| black_box(append_lorem(50)))
-    });
+    c.bench_function("insert::append::1_lorem", |b| b.iter(|| black_box(append_lorem(1))));
+    c.bench_function("insert::append::10_lorem", |b| b.iter(|| black_box(append_lorem(10))));
+    c.bench_function("insert::append::50_lorem", |b| b.iter(|| black_box(append_lorem(50))));
 }
 
 fn random(c: &mut Criterion) {
-    c.bench_function("insert::random::1_lorem", |b| {
-        b.iter(|| black_box(random_lorem(1)))
-    });
-    c.bench_function("insert::random::10_lorem", |b| {
-        b.iter(|| black_box(random_lorem(10)))
-    });
-    c.bench_function("insert::random::50_lorem", |b| {
-        b.iter(|| black_box(random_lorem(50)))
-    });
+    c.bench_function("insert::random::1_lorem", |b| b.iter(|| black_box(random_lorem(1))));
+    c.bench_function("insert::random::10_lorem", |b| b.iter(|| black_box(random_lorem(10))));
+    c.bench_function("insert::random::50_lorem", |b| b.iter(|| black_box(random_lorem(50))));
 }
 
 // Inserting a long line is slower than multiple short lines into `TextArea`
 fn long(c: &mut Criterion) {
-    c.bench_function("insert::long::1_lorem", |b| {
-        b.iter(|| black_box(append_long_lorem(1)))
-    });
-    c.bench_function("insert::long::5_lorem", |b| {
-        b.iter(|| black_box(append_long_lorem(5)))
-    });
+    c.bench_function("insert::long::1_lorem", |b| b.iter(|| black_box(append_long_lorem(1))));
+    c.bench_function("insert::long::5_lorem", |b| b.iter(|| black_box(append_long_lorem(5))));
     c.bench_function("insert::long::10_lorem", |b| {
         b.iter(|| black_box(append_long_lorem(10)))
     });

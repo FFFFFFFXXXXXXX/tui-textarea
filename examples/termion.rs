@@ -40,11 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let mut textarea = TextArea::default();
-    textarea.set_block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Termion Minimal Example"),
-    );
+    textarea.set_block(Block::default().borders(Borders::ALL).title("Termion Minimal Example"));
 
     loop {
         match events.recv()? {

@@ -38,7 +38,6 @@ struct Editor<'a> {
     buffers: Vec<Buffer<'a>>,
     term: Terminal<CrosstermBackend<io::Stdout>>,
     message: Option<Cow<'static, str>>,
-    search: SearchBox<'a>,
 }
 
 #[derive(PartialEq)]
@@ -67,7 +66,6 @@ impl<'a> Editor<'a> {
             buffers,
             term,
             message: None,
-            search: SearchBox::default(),
         })
     }
 
@@ -78,8 +76,7 @@ impl<'a> Editor<'a> {
         loop {
             // wait for next userinput (blocking!)
             let event = crossterm::event::read()?;
-            // Event::Resize(_, _) gets ignored by tui_textarea which means no re-render
-            // => manually re-render on window resize
+            // manually re-render on window resize because Event::Resize(_, _) gets ignored by tui_textarea
             if let Event::Resize(_, _) = event {
                 self.render()?;
             }
@@ -103,83 +100,103 @@ impl<'a> Editor<'a> {
     }
 
     fn process_input(&mut self, event: Input) -> io::Result<Status> {
-        if self.search.height() > 0 {
-            let textarea = &mut self.buffers[self.current].textarea;
-            match event {
-                Input { key: Key::Down, .. } => {
-                    if !textarea.search_forward(false) {
-                        self.search.set_error(Some("Pattern not found"));
+        match event {
+            Input { key: Key::F(11), .. } => {
+                self.buffers[self.current].textarea.toggle_fullscreen();
+            }
+            Input { key: Key::F(12), .. } => {
+                self.buffers[self.current].textarea.toggle_line_numbers();
+            }
+
+            Input {
+                key: Key::Char('q'),
+                ctrl: true,
+                ..
+            } => return Ok(Status::Stop),
+            Input {
+                key: Key::Char(char),
+                alt: true,
+                ctrl: false,
+                shift: false,
+            } if char.is_ascii_digit() => {
+                let buf_idx = (char as u32 - '1' as u32) as usize;
+                if buf_idx < self.buffers.len() && self.current != buf_idx {
+                    self.current = buf_idx;
+                    self.message = Some(format!("Switched to buffer #{}", self.current + 1).into());
+                }
+            }
+            Input {
+                key: Key::Char('s'),
+                ctrl: true,
+                ..
+            } => {
+                self.buffers[self.current].save()?;
+                self.message = Some("Saved!".into());
+            }
+
+            event => {
+                let buffer = &mut self.buffers[self.current];
+                let textarea = &mut buffer.textarea;
+                let search = &mut buffer.search;
+                if search.open {
+                    match event {
+                        Input { key: Key::Down, .. } => {
+                            if !textarea.search_forward(false) {
+                                search.set_error(Some("Pattern not found"));
+                            }
+                        }
+                        Input { key: Key::Up, .. } => {
+                            if !textarea.search_back(false) {
+                                search.set_error(Some("Pattern not found"));
+                            }
+                        }
+                        Input { key: Key::Enter, .. } => {
+                            if !textarea.search_forward(true) {
+                                self.message = Some("Pattern not found".into());
+                            }
+                            search.close();
+                            textarea.set_search_pattern("").unwrap();
+                        }
+                        Input { key: Key::Esc, .. } => {
+                            search.close();
+                            textarea.set_search_pattern("").unwrap();
+                        }
+                        input => {
+                            if let Some(query) = search.input(input) {
+                                let maybe_err = textarea.set_search_pattern(query).err();
+                                search.set_error(maybe_err);
+                            }
+                        }
                     }
-                }
-                Input { key: Key::Up, .. } => {
-                    if !textarea.search_back(false) {
-                        self.search.set_error(Some("Pattern not found"));
-                    }
-                }
-                Input { key: Key::Enter, .. } => {
-                    if !textarea.search_forward(true) {
-                        self.message = Some("Pattern not found".into());
-                    }
-                    self.search.close();
-                    textarea.set_search_pattern("").unwrap();
-                }
-                Input { key: Key::Esc, .. } => {
-                    self.search.close();
-                    textarea.set_search_pattern("").unwrap();
-                }
-                input => {
-                    if let Some(query) = self.search.input(input) {
-                        let maybe_err = textarea.set_search_pattern(query).err();
-                        self.search.set_error(maybe_err);
+                } else {
+                    match event {
+                        Input {
+                            key: Key::Char('f'),
+                            ctrl: true,
+                            ..
+                        } => {
+                            search.open();
+                        }
+                        input => {
+                            let buffer = &mut self.buffers[self.current];
+                            buffer.modified |= buffer.textarea.input(input);
+                        }
                     }
                 }
             }
-        } else {
-            match event {
-                Input {
-                    key: Key::Char('q'),
-                    ctrl: true,
-                    ..
-                } => return Ok(Status::Stop),
-                Input {
-                    key: Key::Char(char),
-                    alt: true,
-                    ctrl: false,
-                    shift: false,
-                } if char.is_ascii_digit() => {
-                    let buf_idx = (char as u32 - '1' as u32) as usize;
-                    if buf_idx < self.buffers.len() && self.current != buf_idx {
-                        self.current = buf_idx;
-                        self.message = Some(format!("Switched to buffer #{}", self.current + 1).into());
-                    }
-                }
-                Input {
-                    key: Key::Char('s'),
-                    ctrl: true,
-                    ..
-                } => {
-                    self.buffers[self.current].save()?;
-                    self.message = Some("Saved!".into());
-                }
-                Input {
-                    key: Key::Char('f'),
-                    ctrl: true,
-                    ..
-                } => {
-                    self.search.open();
-                }
-                input => {
-                    let buffer = &mut self.buffers[self.current];
-                    buffer.modified |= buffer.textarea.input(input);
-                }
-            }
-        }
+        };
 
         Ok(Status::Continue)
     }
 
     fn render(&mut self) -> io::Result<()> {
-        let search_height = self.search.height();
+        let num_buffers = self.buffers.len();
+
+        let buffer = &mut self.buffers[self.current];
+        let textarea = &mut buffer.textarea;
+        let search = &mut buffer.search;
+
+        let search_height = search.height();
         let layout = Layout::default().direction(Direction::Vertical).constraints([
             Constraint::Length(search_height),
             Constraint::Min(1),
@@ -191,14 +208,11 @@ impl<'a> Editor<'a> {
             .constraints([Constraint::Length(search_height), Constraint::Min(1)]);
 
         self.term.draw(|f| {
-            let buffer = &self.buffers[self.current];
-            let textarea = &buffer.textarea;
-
             if textarea.is_fullscreen() {
                 let chunks = fullscreen_layout.split(f.size());
 
                 if search_height > 0 {
-                    f.render_widget(self.search.textarea.widget(), chunks[0]);
+                    f.render_widget(search.textarea.widget(), chunks[0]);
                 }
 
                 f.render_widget(textarea.widget(), chunks[1]);
@@ -206,14 +220,14 @@ impl<'a> Editor<'a> {
                 let chunks = layout.split(f.size());
 
                 if search_height > 0 {
-                    f.render_widget(self.search.textarea.widget(), chunks[0]);
+                    f.render_widget(search.textarea.widget(), chunks[0]);
                 }
 
                 f.render_widget(textarea.widget(), chunks[1]);
 
                 // Render status line
                 let modified = if buffer.modified { " [modified]" } else { "" };
-                let slot = format!("[{}/{}]", self.current + 1, self.buffers.len());
+                let slot = format!("[{}/{}]", self.current + 1, num_buffers);
                 let path = format!(" {}{} ", buffer.path.display(), modified);
                 let (row, col) = textarea.cursor();
                 let cursor = format!("({},{})", row + 1, col + 1);
@@ -281,6 +295,7 @@ struct Buffer<'a> {
     textarea: TextArea<'a>,
     path: PathBuf,
     modified: bool,
+    search: SearchBox<'a>,
 }
 
 impl<'a> Buffer<'a> {
@@ -307,6 +322,7 @@ impl<'a> Buffer<'a> {
             textarea,
             path,
             modified: false,
+            search: SearchBox::default(),
         })
     }
 
@@ -373,14 +389,9 @@ impl<'a> SearchBox<'a> {
 
     fn input(&mut self, input: Input) -> Option<&'_ str> {
         match input {
-            Input { key: Key::Enter, .. }
-            | Input {
-                key: Key::Char('m'),
-                ctrl: true,
-                ..
-            } => None, // Disable shortcuts which inserts a newline. See `single_line` example
+            Input { key: Key::Enter, .. } => None, // disable inputs which inserts a newline
             input => {
-                let modified = self.textarea.input(input);
+                let modified = self.textarea.input_without_shortcuts(input);
                 modified.then(|| self.textarea.lines()[0].as_str())
             }
         }

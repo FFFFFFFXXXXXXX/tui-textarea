@@ -29,12 +29,7 @@ fn prepare_textarea() -> TextArea<'static> {
     TextArea::new(lines)
 }
 
-fn run(
-    mut textarea: TextArea<'_>,
-    moves: &[CursorMove],
-    restore: Restore,
-    repeat: usize,
-) -> (usize, usize) {
+fn run(mut textarea: TextArea<'_>, moves: &[CursorMove], restore: Restore, repeat: usize) -> (usize, usize) {
     let mut term = dummy_terminal();
 
     let mut prev = textarea.cursor();
@@ -57,44 +52,16 @@ fn run(
 fn move_char(c: &mut Criterion) {
     let textarea = prepare_textarea();
     c.bench_function("cursor::char::forward", |b| {
-        b.iter(|| {
-            black_box(run(
-                textarea.clone(),
-                &[CursorMove::Forward],
-                Restore::TopLeft,
-                1000,
-            ))
-        })
+        b.iter(|| black_box(run(textarea.clone(), &[CursorMove::Forward], Restore::TopLeft, 1000)))
     });
     c.bench_function("cursor::char::back", |b| {
-        b.iter(|| {
-            black_box(run(
-                textarea.clone(),
-                &[CursorMove::Back],
-                Restore::BottomRight,
-                1000,
-            ))
-        })
+        b.iter(|| black_box(run(textarea.clone(), &[CursorMove::Back], Restore::BottomRight, 1000)))
     });
     c.bench_function("cursor::char::down", |b| {
-        b.iter(|| {
-            black_box(run(
-                textarea.clone(),
-                &[CursorMove::Down],
-                Restore::TopLeft,
-                1000,
-            ))
-        })
+        b.iter(|| black_box(run(textarea.clone(), &[CursorMove::Down], Restore::TopLeft, 1000)))
     });
     c.bench_function("cursor::char::up", |b| {
-        b.iter(|| {
-            black_box(run(
-                textarea.clone(),
-                &[CursorMove::Up],
-                Restore::BottomLeft,
-                1000,
-            ))
-        })
+        b.iter(|| black_box(run(textarea.clone(), &[CursorMove::Up], Restore::BottomLeft, 1000)))
     });
 }
 fn move_word(c: &mut Criterion) {

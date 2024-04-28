@@ -18,8 +18,8 @@ pub const LOREM: &[&str] = &[
     "culpa qui officia deserunt mollit anim id est laborum.",
 ];
 pub const SEED: [u8; 32] = [
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
-    27, 28, 29, 30, 31, 32,
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+    32,
 ];
 
 pub struct DummyBackend {
@@ -116,7 +116,6 @@ pub trait TerminalExt {
 impl TerminalExt for Terminal<DummyBackend> {
     #[inline]
     fn draw_textarea(&mut self, textarea: &TextArea<'_>) {
-        self.draw(|f| f.render_widget(textarea.widget(), f.size()))
-            .unwrap();
+        self.draw(|f| f.render_widget(textarea.widget(), f.size())).unwrap();
     }
 }

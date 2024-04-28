@@ -1,7 +1,5 @@
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
@@ -30,10 +28,7 @@ impl<'a> Default for SearchBox<'a> {
     fn default() -> Self {
         let mut textarea = TextArea::default();
         textarea.set_block(Block::default().borders(Borders::ALL).title("Search"));
-        Self {
-            textarea,
-            open: false,
-        }
+        Self { textarea, open: false }
     }
 }
 
@@ -60,9 +55,7 @@ impl<'a> SearchBox<'a> {
 
     fn input(&mut self, input: Input) -> Option<&'_ str> {
         match input {
-            Input {
-                key: Key::Enter, ..
-            }
+            Input { key: Key::Enter, .. }
             | Input {
                 key: Key::Char('m'),
                 ctrl: true,
@@ -156,9 +149,7 @@ impl<'a> Editor<'a> {
         I: Iterator,
         I::Item: Into<PathBuf>,
     {
-        let buffers = paths
-            .map(|p| Buffer::new(p.into()))
-            .collect::<io::Result<Vec<_>>>()?;
+        let buffers = paths.map(|p| Buffer::new(p.into())).collect::<io::Result<Vec<_>>>()?;
         if buffers.is_empty() {
             return error!("USAGE: cargo run --example editor FILE1 [FILE2...]");
         }
@@ -179,17 +170,15 @@ impl<'a> Editor<'a> {
     fn run(&mut self) -> io::Result<()> {
         loop {
             let search_height = self.search.height();
-            let layout = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints(
-                    [
-                        Constraint::Length(search_height),
-                        Constraint::Min(1),
-                        Constraint::Length(1),
-                        Constraint::Length(1),
-                    ]
-                    .as_ref(),
-                );
+            let layout = Layout::default().direction(Direction::Vertical).constraints(
+                [
+                    Constraint::Length(search_height),
+                    Constraint::Min(1),
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                ]
+                .as_ref(),
+            );
 
             self.term.draw(|f| {
                 let chunks = layout.split(f.size());
@@ -235,15 +224,9 @@ impl<'a> Editor<'a> {
                         Span::raw(" to jump to first match and close, "),
                         Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
                         Span::raw(" to close, "),
-                        Span::styled(
-                            "^G or ↓ or ^N",
-                            Style::default().add_modifier(Modifier::BOLD),
-                        ),
+                        Span::styled("^G or ↓ or ^N", Style::default().add_modifier(Modifier::BOLD)),
                         Span::raw(" to search next, "),
-                        Span::styled(
-                            "M-G or ↑ or ^P",
-                            Style::default().add_modifier(Modifier::BOLD),
-                        ),
+                        Span::styled("M-G or ↑ or ^P", Style::default().add_modifier(Modifier::BOLD)),
                         Span::raw(" to search previous"),
                     ])
                 } else {
@@ -293,9 +276,7 @@ impl<'a> Editor<'a> {
                             self.search.set_error(Some("Pattern not found"));
                         }
                     }
-                    Input {
-                        key: Key::Enter, ..
-                    } => {
+                    Input { key: Key::Enter, .. } => {
                         if !textarea.search_forward(true) {
                             self.message = Some("Pattern not found".into());
                         }
@@ -326,8 +307,7 @@ impl<'a> Editor<'a> {
                         ..
                     } => {
                         self.current = (self.current + 1) % self.buffers.len();
-                        self.message =
-                            Some(format!("Switched to buffer #{}", self.current + 1).into());
+                        self.message = Some(format!("Switched to buffer #{}", self.current + 1).into());
                     }
                     Input {
                         key: Key::Char('s'),
@@ -360,12 +340,7 @@ impl<'a> Drop for Editor<'a> {
     fn drop(&mut self) {
         self.term.show_cursor().unwrap();
         disable_raw_mode().unwrap();
-        crossterm::execute!(
-            self.term.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        )
-        .unwrap();
+        crossterm::execute!(self.term.backend_mut(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
     }
 }
 

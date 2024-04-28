@@ -50,11 +50,7 @@ struct DisplayTextBuilder {
 
 impl DisplayTextBuilder {
     fn new(tab_len: u8, mask: Option<char>) -> Self {
-        Self {
-            tab_len,
-            width: 0,
-            mask,
-        }
+        Self { tab_len, width: 0, mask }
     }
 
     fn build<'s>(&mut self, s: &'s str) -> Cow<'s, str> {
@@ -107,13 +103,7 @@ pub struct LineHighlighter<'a> {
 }
 
 impl<'a> LineHighlighter<'a> {
-    pub fn new(
-        line: &'a str,
-        cursor_style: Style,
-        tab_len: u8,
-        mask: Option<char>,
-        select_style: Style,
-    ) -> Self {
+    pub fn new(line: &'a str, cursor_style: Style, tab_len: u8, mask: Option<char>, select_style: Style) -> Self {
         Self {
             line,
             spans: vec![],
@@ -130,14 +120,12 @@ impl<'a> LineHighlighter<'a> {
 
     pub fn line_number(&mut self, row: usize, lnum_len: u8, style: Style) {
         let pad = spaces(lnum_len - num_digits(row + 1));
-        self.spans
-            .push(Span::styled(format!("{}{} ", pad, row + 1), style));
+        self.spans.push(Span::styled(format!("{}{} ", pad, row + 1), style));
     }
 
     pub fn cursor_line(&mut self, cursor_col: usize, style: Style) {
         if let Some((start, c)) = self.line.char_indices().nth(cursor_col) {
-            self.boundaries
-                .push((Boundary::Cursor(self.cursor_style), start));
+            self.boundaries.push((Boundary::Cursor(self.cursor_style), start));
             self.boundaries.push((Boundary::End, start + c.len_utf8()));
         } else {
             self.cursor_at_end = true;
@@ -179,8 +167,7 @@ impl<'a> LineHighlighter<'a> {
             return;
         };
         if start != end {
-            self.boundaries
-                .push((Boundary::Select(self.select_style), start));
+            self.boundaries.push((Boundary::Select(self.select_style), start));
             self.boundaries.push((Boundary::End, end));
         }
     }
@@ -486,27 +473,15 @@ mod tests {
             ("abc", (1, 1, 2, 1, 3), &[("ab", DEFAULT), ("c", SEL)][..]),
             ("abc", (1, 1, 0, 1, 3), &[("abc", SEL)][..]),
             ("abc", (1, 1, 0, 2, 0), &[("abc", SEL), (" ", SEL)][..]),
-            (
-                "abc",
-                (1, 1, 2, 2, 0),
-                &[("ab", DEFAULT), ("c", SEL), (" ", SEL)][..],
-            ),
+            ("abc", (1, 1, 2, 2, 0), &[("ab", DEFAULT), ("c", SEL), (" ", SEL)][..]),
             ("abc", (1, 1, 3, 2, 0), &[("abc", DEFAULT), (" ", SEL)][..]),
             ("abc", (2, 1, 0, 3, 0), &[("abc", SEL), (" ", SEL)][..]),
             ("abc", (2, 1, 0, 2, 0), &[("abc", DEFAULT)][..]),
             ("abc", (2, 1, 0, 2, 2), &[("ab", SEL), ("c", DEFAULT)][..]),
             ("abc", (2, 1, 0, 2, 3), &[("abc", SEL)][..]),
-            (
-                "ab\t",
-                (1, 1, 2, 2, 0),
-                &[("ab", DEFAULT), ("  ", SEL), (" ", SEL)][..],
-            ),
+            ("ab\t", (1, 1, 2, 2, 0), &[("ab", DEFAULT), ("  ", SEL), (" ", SEL)][..]),
             ("a\tb", (2, 1, 0, 3, 0), &[("a   b", SEL), (" ", SEL)][..]),
-            (
-                "a\tb",
-                (2, 1, 0, 2, 2),
-                &[("a   ", SEL), ("b", DEFAULT)][..],
-            ),
+            ("a\tb", (2, 1, 0, 2, 2), &[("a   ", SEL), ("b", DEFAULT)][..]),
         ];
 
         for test in tests {
