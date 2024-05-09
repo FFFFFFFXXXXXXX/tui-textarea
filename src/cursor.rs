@@ -259,27 +259,17 @@ impl CursorMove {
                 Some((row, fit_col(col, &lines[row])))
             }
             WordForward => {
-                let chars = lines[row].chars().count();
                 if let Some(col) = find_word_end_forward(&lines[row], col) {
                     Some((row, col))
-                } else if col == chars {
-                    lines
-                        .get(row + 1)
-                        .map(|line| (row + 1, find_word_end_forward(line, 0).unwrap_or(0)))
                 } else {
-                    Some((row, lines[row].chars().count()))
+                    Some((row + 1, 0))
                 }
             }
             WordBack => {
                 if let Some(col) = find_word_start_backward(&lines[row], col) {
                     Some((row, col))
-                } else if col == 0 && row > 0 {
-                    lines.get(row - 1).map(|line| {
-                        let chars = lines[row - 1].chars().count();
-                        (row - 1, find_word_start_backward(line, chars).unwrap_or(chars))
-                    })
                 } else {
-                    Some((row, 0))
+                    Some((row - 1, lines[row - 1].chars().count()))
                 }
             }
             ParagraphForward => {
