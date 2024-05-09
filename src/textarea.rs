@@ -1441,7 +1441,7 @@ impl<'a> TextArea<'a> {
     /// assert_eq!(textarea.lines(), ["Hello World"]); // Text does not change
     /// ```
     pub fn copy(&mut self) {
-        if let Some((start, end)) = self.take_selection_range() {
+        if let Some((start, end)) = self.selection_range() {
             if start.row == end.row {
                 self.yank = self.lines[start.row][start.offset..end.offset].to_string().into();
                 return;
