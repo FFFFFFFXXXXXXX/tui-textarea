@@ -12,7 +12,7 @@ use arbitrary::Arbitrary;
 ///
 /// This type is marked as `#[non_exhaustive]` since more keys may be supported in the future.
 #[non_exhaustive]
-#[derive(Clone, Copy, Debug, PartialEq, Hash)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Hash)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 pub enum Key {
     /// Normal letter key input
@@ -58,13 +58,8 @@ pub enum Key {
     /// Virtual key to scroll up by mouse
     MouseScrollUp,
     /// An invalid key input (this key is always ignored by [`TextArea`](crate::TextArea))
+    #[default]
     Null,
-}
-
-impl Default for Key {
-    fn default() -> Self {
-        Key::Null
-    }
 }
 
 /// Backend-agnostic key input type.
