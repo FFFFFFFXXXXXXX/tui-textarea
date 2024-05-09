@@ -13,8 +13,9 @@ use crate::widget::{Renderer, Viewport};
 use crate::word::{find_word_exclusive_end_forward, find_word_start_backward};
 #[cfg(feature = "ratatui")]
 use ratatui::text::Line;
-use std::fmt;
 use std::cmp::{min, Ordering};
+use std::fmt;
+use std::fmt::Display;
 use std::io::BufRead;
 use std::{fs, io};
 #[cfg(feature = "tuirs")]
@@ -48,11 +49,11 @@ impl From<Vec<String>> for YankText {
     }
 }
 
-impl fmt::Display for YankText {
+impl Display for YankText {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Piece(s) => write!(f, "{}", s),
-            Self::Chunk(ss) => write!(f, "{}", ss.join("\n")),
+            Self::Piece(s) => f.write_str(s),
+            Self::Chunk(s) => f.write_str(&s.join("\n")),
         }
     }
 }
@@ -936,7 +937,7 @@ impl<'a> TextArea<'a> {
 
         let first_non_tab_idx = self.lines[row]
             .char_indices()
-            .find_map(|(i, char)| (char != ' ' && char != '\t').then(|| i))
+            .find_map(|(i, char)| (char != ' ' && char != '\t').then_some(i))
             .unwrap_or_else(|| self.lines[row].len().saturating_sub(1));
 
         self.cursor = (row, col.saturating_sub(tab_len));
