@@ -292,6 +292,8 @@ impl CursorMove {
                 // `+ 1` for not accepting the current cursor position
                 if let Some(col) = find_word_inclusive_end_forward(&lines[row], col + 1) {
                     Some((row, col))
+                } else if row == lines.len() - 1 {
+                    Some((row, col))
                 } else {
                     let mut row = row;
                     loop {
@@ -319,6 +321,8 @@ impl CursorMove {
             }
             WordBack => {
                 if let Some(col) = find_word_start_backward(&lines[row], col) {
+                    Some((row, col))
+                } else if row == 0 {
                     Some((row, col))
                 } else {
                     Some((row - 1, lines[row - 1].chars().count()))
