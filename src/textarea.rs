@@ -601,6 +601,146 @@ impl<'a> TextArea<'a> {
         }
     }
 
+    pub fn single_line_input(&mut self, input: impl Into<Input>) -> bool {
+        match input.into() {
+            Input {
+                key: Key::Backspace,
+                ctrl: false,
+                alt: false,
+                ..
+            } => self.delete_char(),
+            Input {
+                key: Key::Backspace,
+                ctrl: true,
+                alt: false,
+                ..
+            } => self.delete_word(),
+            Input {
+                key: Key::Delete,
+                ctrl: true,
+                alt: false,
+                ..
+            } => self.delete_next_word(),
+            Input {
+                key: Key::Delete,
+                ctrl: false,
+                alt: false,
+                ..
+            } => self.delete_next_char(),
+            Input {
+                key: Key::Char('k'),
+                ctrl: true,
+                alt: false,
+                shift: false,
+            } => self.delete_line_by_end(),
+            Input {
+                key: Key::Char('j'),
+                ctrl: true,
+                alt: false,
+                shift: false,
+            } => self.delete_line_by_head(),
+
+            Input {
+                key: Key::Char('a'),
+                ctrl: true,
+                alt: false,
+                shift: false,
+            } => {
+                self.select_all();
+                false
+            }
+
+            Input {
+                key: Key::Left,
+                ctrl: false,
+                alt: false,
+                shift,
+            } => {
+                self.move_cursor_with_shift(CursorMove::Back, shift);
+                false
+            }
+            Input {
+                key: Key::Right,
+                ctrl: false,
+                alt: false,
+                shift,
+            } => {
+                self.move_cursor_with_shift(CursorMove::Forward, shift);
+                false
+            }
+            Input {
+                key: Key::Left,
+                ctrl: true,
+                alt: false,
+                shift,
+            } => {
+                self.move_cursor_with_shift(CursorMove::WordBack, shift);
+                false
+            }
+            Input {
+                key: Key::Right,
+                ctrl: true,
+                alt: false,
+                shift,
+            } => {
+                self.move_cursor_with_shift(CursorMove::WordForward, shift);
+                false
+            }
+
+            Input { key: Key::Home, shift, .. } => {
+                self.move_cursor_with_shift(CursorMove::Head, shift);
+                false
+            }
+            Input { key: Key::End, shift, .. } => {
+                self.move_cursor_with_shift(CursorMove::End, shift);
+                false
+            }
+
+            Input {
+                key: Key::Char('z'),
+                ctrl: true,
+                alt: false,
+                ..
+            } => self.undo(),
+            Input {
+                key: Key::Char('y'),
+                ctrl: true,
+                alt: false,
+                ..
+            } => self.redo(),
+
+            Input {
+                key: Key::Char('v'),
+                ctrl: true,
+                alt: false,
+                ..
+            }
+            | Input { key: Key::Paste, .. } => self.paste(),
+            Input {
+                key: Key::Char('x'),
+                ctrl: true,
+                alt: false,
+                ..
+            }
+            | Input { key: Key::Cut, .. } => self.delete_line(true),
+            Input {
+                key: Key::Char('c'),
+                ctrl: true,
+                alt: false,
+                ..
+            }
+            | Input { key: Key::Copy, .. } => {
+                self.copy();
+                false
+            }
+            Input { key: Key::Char(c), .. } => {
+                self.insert_char(c);
+                true
+            }
+            _ => false,
+        }
+    }
+
     fn push_change(&mut self, edit: Edit) {
         self.history.push(edit);
         self.cursor = self.history.apply(&mut self.lines);
@@ -923,35 +1063,43 @@ impl<'a> TextArea<'a> {
             return false;
         }
 
-        let tab = if self.hard_tab_indent {
-            "\t"
-        } else {
-            spaces(self.tab_len)
-        };
-        let tab_len = tab.len();
-
         let (row, col) = self.cursor;
-        if !self.lines[row].starts_with(tab) {
-            return false;
+        let (tab, tab_symbol) = if self.hard_tab_indent {
+            ("\t", '\t')
+        } else {
+            (spaces(self.tab_len), ' ')
+        };
+        let tab_len = tab.chars().count();
+
+        if let Some(char_idx) = self.lines[row]
+            .char_indices()
+            .find_map(|(char_idx, char)| (char != tab_symbol).then_some(char_idx))
+        {
+            if char_idx == 0 {
+                return false;
+            }
+
+            let mut chars_to_remove = char_idx % tab_len;
+            if chars_to_remove == 0 {
+                chars_to_remove = tab_len;
+            }
+
+            let col_byte_offset = self.lines[row]
+                .char_indices()
+                .nth(col)
+                .map(|(i, _)| i)
+                .unwrap_or_else(|| self.lines[row].len());
+
+            self.push_change(Edit::new(
+                EditKind::DeleteStr(tab.chars().take(chars_to_remove).collect()),
+                Pos::new(row, col, col_byte_offset),
+                Pos::new(row, col.saturating_sub(chars_to_remove), 0),
+            ));
+
+            return true;
         }
 
-        let first_non_tab_idx = self.lines[row]
-            .char_indices()
-            .find_map(|(i, char)| (char != ' ' && char != '\t').then_some(i))
-            .unwrap_or_else(|| self.lines[row].len().saturating_sub(1));
-
-        self.cursor = (row, col.saturating_sub(tab_len));
-        self.selection_start = self
-            .selection_start
-            .map(|(row, col)| (row, col.saturating_sub(tab_len)));
-
-        self.push_change(Edit::new(
-            EditKind::DeleteStr(tab.to_owned()),
-            Pos::new(row, col, first_non_tab_idx - tab_len),
-            Pos::new(row, col - tab_len, col - tab_len),
-        ));
-
-        true
+        false
     }
 
     /// Remove a tab at the start of the line of the current cursor position.
@@ -1226,7 +1374,7 @@ impl<'a> TextArea<'a> {
     /// textarea.delete_word();
     /// assert_eq!(textarea.lines(), ["aaa bbb "]);
     /// textarea.delete_word();
-    /// assert_eq!(textarea.lines(), ["aaa "]);
+    /// assert_eq!(textarea.lines(), ["aaa bbb"]);
     /// ```
     pub fn delete_word(&mut self) -> bool {
         if self.delete_selection(false) {
@@ -1256,7 +1404,7 @@ impl<'a> TextArea<'a> {
     /// textarea.delete_next_word();
     /// assert_eq!(textarea.lines(), [" bbb ccc"]);
     /// textarea.delete_next_word();
-    /// assert_eq!(textarea.lines(), [" ccc"]);
+    /// assert_eq!(textarea.lines(), ["bbb ccc"]);
     /// ```
     pub fn delete_next_word(&mut self) -> bool {
         if self.delete_selection(false) {
@@ -1333,6 +1481,16 @@ impl<'a> TextArea<'a> {
     /// ```
     pub fn cancel_selection(&mut self) {
         self.selection_start = None;
+    }
+
+    pub fn take_selection(&mut self) -> Option<&str> {
+        if let Some((start, end)) = self.take_selection_range() {
+            if start.row == end.row {
+                return Some(&self.lines[start.row][start.offset..end.offset]);
+            }
+        }
+
+        None
     }
 
     /// Select the entire text. Cursor moves to the end of the text buffer. When text selection is already ongoing,

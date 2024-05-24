@@ -118,7 +118,7 @@ pub enum CursorMove {
     /// textarea.move_cursor(CursorMove::WordForward);
     /// assert_eq!(textarea.cursor(), (0, 3));
     /// textarea.move_cursor(CursorMove::WordForward);
-    /// assert_eq!(textarea.cursor(), (0, 7));
+    /// assert_eq!(textarea.cursor(), (0, 4));
     /// ```
     WordForward,
     /// Move cursor forward to the next end of word. Word boundary appears at spaces, punctuations, and others. For example
@@ -160,9 +160,9 @@ pub enum CursorMove {
     /// textarea.move_cursor(CursorMove::WordBack);
     /// assert_eq!(textarea.cursor(), (0, 8));
     /// textarea.move_cursor(CursorMove::WordBack);
-    /// assert_eq!(textarea.cursor(), (0, 4));
+    /// assert_eq!(textarea.cursor(), (0, 7));
     /// textarea.move_cursor(CursorMove::WordBack);
-    /// assert_eq!(textarea.cursor(), (0, 0));
+    /// assert_eq!(textarea.cursor(), (0, 4));
     /// ```
     WordBack,
     /// Move cursor down by one paragraph. Paragraph is a chunk of non-empty lines. Cursor moves to the first line of paragraph.

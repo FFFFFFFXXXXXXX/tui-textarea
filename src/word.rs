@@ -35,12 +35,17 @@ pub fn find_word_exclusive_end_forward(line: &str, start_col: usize) -> Option<u
     let mut prev = CharKind::new(it.next()?.1);
     for (col, c) in it {
         let cur = CharKind::new(c);
+
+        if prev == CharKind::Space && prev != cur {
+            return Some(col);
+        }
+
         if prev != CharKind::Space && prev != cur {
             return Some(col);
         }
         prev = cur;
     }
-    (prev != CharKind::Space).then(|| line.chars().count())
+    Some(line.chars().count())
 }
 
 pub fn find_word_inclusive_end_forward(line: &str, start_col: usize) -> Option<usize> {
@@ -66,12 +71,17 @@ pub fn find_word_start_backward(line: &str, start_col: usize) -> Option<usize> {
     let idx = line.char_indices().nth(start_col).map(|(i, _)| i).unwrap_or(line.len());
     let mut it = line[..idx].chars().rev().enumerate();
     let mut cur = CharKind::new(it.next()?.1);
-    for (i, c) in it {
+    for (col, c) in it {
         let next = CharKind::new(c);
+
+        if cur == CharKind::Space && next != cur {
+            return Some(start_col - col);
+        }
+
         if cur != CharKind::Space && next != cur {
-            return Some(start_col - i);
+            return Some(start_col - col);
         }
         cur = next;
     }
-    (cur != CharKind::Space).then_some(0)
+    Some(0)
 }

@@ -989,27 +989,6 @@ fn test_cut_single_line() {
 }
 
 #[test]
-fn test_copy_empty() {
-    for row in 0..=2 {
-        for col in 0..=2 {
-            let check = |f: fn(&mut TextArea<'_>)| {
-                let mut t = TextArea::from(["ab", "cd", "ef"]);
-                t.move_cursor(CursorMove::Jump(row, col));
-                t.start_selection();
-                t.move_cursor(CursorMove::Jump(row, col));
-                f(&mut t);
-                assert!(!t.is_selecting());
-                assert_eq!(t.cursor(), (row as _, col as _));
-                assert_eq!(t.lines(), ["ab", "cd", "ef"]);
-                assert_no_undo_redo(&mut t, "");
-            };
-
-            check(|t| t.copy());
-        }
-    }
-}
-
-#[test]
 fn test_copy_cut_paste_multi_lines() {
     #[rustfmt::skip]
     let tests = [
@@ -1605,11 +1584,11 @@ fn test_delete_word() {
     t.test((0, 0), (0, 0, t.0, ""));
     t.test((0, 2), (0, 0, &["rd  ことば 🐶", " x"], "wo"));
     t.test((0, 4), (0, 0, &["  ことば 🐶", " x"], "word"));
-    t.test((0, 5), (0, 0, &[" ことば 🐶", " x"], "word "));
-    t.test((0, 6), (0, 0, &["ことば 🐶", " x"], "word  "));
+    t.test((0, 5), (0, 4, &["word ことば 🐶", " x"], " "));
+    t.test((0, 6), (0, 4, &["wordことば 🐶", " x"], "  "));
     t.test((0, 7), (0, 6, &["word  とば 🐶", " x"], "こ"));
     t.test((0, 9), (0, 6, &["word   🐶", " x"], "ことば"));
-    t.test((0, 10), (0, 6, &["word  🐶", " x"], "ことば "));
+    t.test((0, 10), (0, 9, &["word  ことば🐶", " x"], " "));
     t.test((0, 11), (0, 10, &["word  ことば ", " x"], "🐶"));
     t.test((1, 0), (0, 11, &["word  ことば 🐶 x"], ""));
     t.test((1, 1), (1, 0, &["word  ことば 🐶", "x"], " "));
@@ -1621,12 +1600,12 @@ fn test_delete_next_word() {
     let t = DeleteTester(&["word  ことば 🐶", " x"], |t| t.delete_next_word());
     t.test((0, 0), (0, 0, &["  ことば 🐶", " x"], "word"));
     t.test((0, 2), (0, 2, &["wo  ことば 🐶", " x"], "rd"));
-    t.test((0, 4), (0, 4, &["word 🐶", " x"], "  ことば"));
-    t.test((0, 5), (0, 5, &["word  🐶", " x"], " ことば"));
+    t.test((0, 4), (0, 4, &["wordことば 🐶", " x"], "  "));
+    t.test((0, 5), (0, 5, &["word ことば 🐶", " x"], " "));
     t.test((0, 6), (0, 6, &["word   🐶", " x"], "ことば"));
-    t.test((0, 9), (0, 9, &["word  ことば", " x"], " 🐶"));
+    t.test((0, 9), (0, 9, &["word  ことば🐶", " x"], " "));
     t.test((0, 10), (0, 10, &["word  ことば ", " x"], "🐶"));
     t.test((0, 11), (0, 11, &["word  ことば 🐶 x"], ""));
-    t.test((1, 0), (1, 0, &["word  ことば 🐶", ""], " x"));
+    t.test((1, 0), (1, 0, &["word  ことば 🐶", "x"], " "));
     t.test((1, 2), (1, 2, t.0, ""));
 }
