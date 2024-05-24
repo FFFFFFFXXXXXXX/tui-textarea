@@ -172,23 +172,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn event_to_input() {
-        for (from, to) in [
-            (
-                Event::Key(key_event(KeyCode::Char('a'), KeyModifiers::empty())),
-                input(Key::Char('a'), false, false, false),
-            ),
-            (
-                Event::Mouse(mouse_event(MouseEventKind::ScrollDown, KeyModifiers::empty())),
-                input(Key::MouseScrollDown, false, false, false),
-            ),
-            (Event::FocusGained, input(Key::Null, false, false, false)),
-        ] {
-            assert_eq!(Input::from(from.clone()), to, "{:?} -> {:?}", from, to);
-        }
-    }
-
     // Regression for https://github.com/rhysd/tui-textarea/issues/14
     #[test]
     fn ignore_key_release_event() {

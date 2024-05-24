@@ -175,7 +175,14 @@ impl<'a> Editor<'a> {
                             ctrl: true,
                             ..
                         } => {
-                            search.open();
+                            let search_pattern = {
+                                let prev_search_pattern = search.open();
+                                textarea.take_selection().unwrap_or(prev_search_pattern).to_owned()
+                            };
+
+                            search.set_pattern(&search_pattern);
+                            let maybe_err = textarea.set_search_pattern(search_pattern).err();
+                            search.set_error(maybe_err);
                         }
                         input => {
                             let buffer = &mut self.buffers[self.current];
@@ -304,6 +311,7 @@ impl<'a> Buffer<'a> {
             if md.is_file() {
                 let mut textarea = TextArea::new_from_file(&fs::File::open(&path)?)?;
                 if textarea.lines().iter().any(|l| l.starts_with('\t')) {
+                    println!("HARD_TAB");
                     textarea.set_hard_tab_indent(true);
                 }
                 textarea
@@ -367,8 +375,9 @@ impl<'a> Default for SearchBox<'a> {
 }
 
 impl<'a> SearchBox<'a> {
-    fn open(&mut self) {
+    fn open(&mut self) -> &'_ str {
         self.open = true;
+        self.textarea.lines()[0].as_str()
     }
 
     fn close(&mut self) {
@@ -376,7 +385,6 @@ impl<'a> SearchBox<'a> {
         // Remove input for next search. Do not recreate `self.textarea` instance to keep undo history so that users can
         // restore previous input easily.
         self.textarea.move_cursor(CursorMove::End);
-        self.textarea.delete_line_by_head();
     }
 
     fn height(&self) -> u16 {
@@ -387,11 +395,16 @@ impl<'a> SearchBox<'a> {
         }
     }
 
+    fn set_pattern(&mut self, pattern: &str) {
+        self.textarea.delete_line(false);
+        self.textarea.insert_str(pattern);
+    }
+
     fn input(&mut self, input: Input) -> Option<&'_ str> {
         match input {
             Input { key: Key::Enter, .. } => None, // disable inputs which inserts a newline
             input => {
-                let modified = self.textarea.input_without_shortcuts(input);
+                let modified = self.textarea.single_line_input(input);
                 modified.then(|| self.textarea.lines()[0].as_str())
             }
         }
