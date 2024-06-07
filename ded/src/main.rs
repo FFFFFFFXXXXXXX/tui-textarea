@@ -311,7 +311,6 @@ impl<'a> Buffer<'a> {
             if md.is_file() {
                 let mut textarea = TextArea::new_from_file(&fs::File::open(&path)?)?;
                 if textarea.lines().iter().any(|l| l.starts_with('\t')) {
-                    println!("HARD_TAB");
                     textarea.set_hard_tab_indent(true);
                 }
                 textarea
