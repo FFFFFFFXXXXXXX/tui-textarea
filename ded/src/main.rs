@@ -6,13 +6,12 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Terminal;
-use tui_textarea::{CursorMove, Input, Key, TextArea};
+use tui_textarea::{CursorMove, Fullscreen, Input, Key, TextArea};
 
 use std::borrow::Cow;
-use std::ffi::OsString;
 use std::fmt::Display;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{absolute, PathBuf};
 use std::{env, fs, io};
 
 macro_rules! error {
@@ -24,12 +23,13 @@ macro_rules! error {
 fn main() -> io::Result<()> {
     let filepaths = env::args_os()
         .skip(1)
-        .map(OsString::into_string)
-        .filter_map(|filepath| match shellexpand::full(&(filepath.ok()?)) {
+        .filter_map(|p| p.into_string().ok())
+        .filter_map(|filepath| match shellexpand::full(&filepath) {
             Ok(Cow::Borrowed(s)) => Some(s.to_owned()),
             Ok(Cow::Owned(s)) => Some(s),
             Err(_) => None,
-        });
+        })
+        .filter_map(|p| absolute(p).ok());
     Editor::new(filepaths)?.run()
 }
 
@@ -210,79 +210,120 @@ impl<'a> Editor<'a> {
             Constraint::Length(1),
             Constraint::Length(1),
         ]);
+
+        let half_fullscreen_layout = Layout::default().direction(Direction::Vertical).constraints([
+            Constraint::Length(search_height),
+            Constraint::Min(1),
+            Constraint::Length(1),
+        ]);
+
         let fullscreen_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(search_height), Constraint::Min(1)]);
 
         self.term.draw(|f| {
-            if textarea.is_fullscreen() {
-                let chunks = fullscreen_layout.split(f.size());
+            match textarea.fullscreen() {
+                Fullscreen::Off => {
+                    let chunks = layout.split(f.size());
 
-                if search_height > 0 {
-                    f.render_widget(search.textarea.widget(), chunks[0]);
+                    if search_height > 0 {
+                        f.render_widget(search.textarea.widget(), chunks[0]);
+                    }
+
+                    f.render_widget(textarea.widget(), chunks[1]);
+
+                    // Render status line
+                    let modified = if buffer.modified { " [modified]" } else { "" };
+                    let slot = format!("[{}/{}]", self.current + 1, num_buffers);
+                    let path = format!(" {}{} ", buffer.path.display(), modified);
+                    let (row, col) = textarea.cursor();
+                    let cursor = format!("({},{})", row + 1, col + 1);
+                    let status_chunks = Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints(
+                            [
+                                Constraint::Length(slot.len() as u16),
+                                Constraint::Min(1),
+                                Constraint::Length(cursor.len() as u16),
+                            ]
+                            .as_ref(),
+                        )
+                        .split(chunks[2]);
+                    let status_style = Style::default().add_modifier(Modifier::REVERSED);
+                    f.render_widget(Paragraph::new(slot).style(status_style), status_chunks[0]);
+                    f.render_widget(Paragraph::new(path).style(status_style), status_chunks[1]);
+                    f.render_widget(Paragraph::new(cursor).style(status_style), status_chunks[2]);
+
+                    // Render message at bottom
+                    let message = if let Some(message) = self.message.take() {
+                        Line::from(Span::raw(message))
+                    } else if search_height > 0 {
+                        Line::from(vec![
+                            Span::raw("Press "),
+                            Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
+                            Span::raw(" to jump to first match and close, "),
+                            Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
+                            Span::raw(" to close, "),
+                            Span::styled("↓", Style::default().add_modifier(Modifier::BOLD)),
+                            Span::raw(" to search next, "),
+                            Span::styled("↑", Style::default().add_modifier(Modifier::BOLD)),
+                            Span::raw(" to search previous"),
+                        ])
+                    } else {
+                        Line::from(vec![
+                            Span::raw("Press "),
+                            Span::styled("^Q", Style::default().add_modifier(Modifier::BOLD)),
+                            Span::raw(" to quit, "),
+                            Span::styled("^S", Style::default().add_modifier(Modifier::BOLD)),
+                            Span::raw(" to save, "),
+                            Span::styled("^F", Style::default().add_modifier(Modifier::BOLD)),
+                            Span::raw(" to search, "),
+                            Span::styled("alt + BUF_ID", Style::default().add_modifier(Modifier::BOLD)),
+                            Span::raw(" to switch buffer"),
+                        ])
+                    };
+                    f.render_widget(Paragraph::new(message), chunks[3]);
                 }
+                Fullscreen::Half => {
+                    let chunks = half_fullscreen_layout.split(f.size());
 
-                f.render_widget(textarea.widget(), chunks[1]);
-            } else {
-                let chunks = layout.split(f.size());
+                    if search_height > 0 {
+                        f.render_widget(search.textarea.widget(), chunks[0]);
+                    }
 
-                if search_height > 0 {
-                    f.render_widget(search.textarea.widget(), chunks[0]);
+                    f.render_widget(textarea.widget(), chunks[1]);
+
+                    // Render status line
+                    let modified = if buffer.modified { " [modified]" } else { "" };
+                    let slot = format!("[{}/{}]", self.current + 1, num_buffers);
+                    let path = format!(" {}{} ", buffer.path.display(), modified);
+                    let (row, col) = textarea.cursor();
+                    let cursor = format!("({},{})", row + 1, col + 1);
+                    let status_chunks = Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints(
+                            [
+                                Constraint::Length(slot.len() as u16),
+                                Constraint::Min(1),
+                                Constraint::Length(cursor.len() as u16),
+                            ]
+                            .as_ref(),
+                        )
+                        .split(chunks[2]);
+                    let status_style = Style::default().add_modifier(Modifier::REVERSED);
+                    f.render_widget(Paragraph::new(slot).style(status_style), status_chunks[0]);
+                    f.render_widget(Paragraph::new(path).style(status_style), status_chunks[1]);
+                    f.render_widget(Paragraph::new(cursor).style(status_style), status_chunks[2]);
                 }
+                Fullscreen::Full => {
+                    let chunks = fullscreen_layout.split(f.size());
 
-                f.render_widget(textarea.widget(), chunks[1]);
+                    if search_height > 0 {
+                        f.render_widget(search.textarea.widget(), chunks[0]);
+                    }
 
-                // Render status line
-                let modified = if buffer.modified { " [modified]" } else { "" };
-                let slot = format!("[{}/{}]", self.current + 1, num_buffers);
-                let path = format!(" {}{} ", buffer.path.display(), modified);
-                let (row, col) = textarea.cursor();
-                let cursor = format!("({},{})", row + 1, col + 1);
-                let status_chunks = Layout::default()
-                    .direction(Direction::Horizontal)
-                    .constraints(
-                        [
-                            Constraint::Length(slot.len() as u16),
-                            Constraint::Min(1),
-                            Constraint::Length(cursor.len() as u16),
-                        ]
-                        .as_ref(),
-                    )
-                    .split(chunks[2]);
-                let status_style = Style::default().add_modifier(Modifier::REVERSED);
-                f.render_widget(Paragraph::new(slot).style(status_style), status_chunks[0]);
-                f.render_widget(Paragraph::new(path).style(status_style), status_chunks[1]);
-                f.render_widget(Paragraph::new(cursor).style(status_style), status_chunks[2]);
-
-                // Render message at bottom
-                let message = if let Some(message) = self.message.take() {
-                    Line::from(Span::raw(message))
-                } else if search_height > 0 {
-                    Line::from(vec![
-                        Span::raw("Press "),
-                        Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to jump to first match and close, "),
-                        Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to close, "),
-                        Span::styled("↓", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to search next, "),
-                        Span::styled("↑", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to search previous"),
-                    ])
-                } else {
-                    Line::from(vec![
-                        Span::raw("Press "),
-                        Span::styled("^Q", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to quit, "),
-                        Span::styled("^S", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to save, "),
-                        Span::styled("^F", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to search, "),
-                        Span::styled("alt + BUF_ID", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to switch buffer"),
-                    ])
-                };
-                f.render_widget(Paragraph::new(message), chunks[3]);
+                    f.render_widget(textarea.widget(), chunks[1]);
+                }
             }
         })?;
 

@@ -34,4 +34,4 @@ use crossterm_025 as crossterm;
 pub use cursor::CursorMove;
 pub use input::{Input, Key};
 pub use scroll::Scrolling;
-pub use textarea::TextArea;
+pub use textarea::{Fullscreen, TextArea};
