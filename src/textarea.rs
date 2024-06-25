@@ -100,7 +100,25 @@ pub struct TextArea<'a> {
     mask: Option<char>,
     selection_start: Option<(usize, usize)>,
     select_style: Style,
-    fullscreen: bool,
+    fullscreen: Fullscreen,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Fullscreen {
+    #[default]
+    Off,
+    Half,
+    Full,
+}
+
+impl Fullscreen {
+    pub fn toggle(&self) -> Self {
+        match self {
+            Fullscreen::Off => Fullscreen::Half,
+            Fullscreen::Half => Fullscreen::Full,
+            Fullscreen::Full => Fullscreen::Off,
+        }
+    }
 }
 
 /// Convert any iterator whose elements can be converted into [`String`] into [`TextArea`]. Each [`String`] element is
@@ -206,7 +224,7 @@ impl<'a> TextArea<'a> {
             mask: None,
             selection_start: None,
             select_style: Style::default().bg(Color::LightBlue),
-            fullscreen: false,
+            fullscreen: Fullscreen::default(),
         }
     }
 
@@ -2483,10 +2501,10 @@ impl<'a> TextArea<'a> {
     }
 
     pub fn toggle_fullscreen(&mut self) {
-        self.fullscreen = !self.fullscreen;
+        self.fullscreen = self.fullscreen.toggle();
     }
 
-    pub fn is_fullscreen(&self) -> bool {
+    pub fn fullscreen(&self) -> Fullscreen {
         self.fullscreen
     }
 }

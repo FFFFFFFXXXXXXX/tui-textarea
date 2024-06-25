@@ -1,3 +1,10 @@
+[workspace]
+members = ["bench", "ded"]
+
+[workspace.dependencies]
+crossterm = { package = "crossterm", version = "0.28.0" }
+ratatui = { version = "0.27.0, <1", default-features = false }
+
 [package]
 name = "tui-textarea"
 version = "0.5.1"
@@ -16,6 +23,18 @@ categories = ["text-editors", "text-processing"]
 keywords = ["tui", "textarea", "editor", "input", "ratatui"]
 include = ["/src", "/examples", "/tests", "/README.md", "/LICENSE.txt"]
 
+[dependencies]
+crossterm = { workspace = true, optional = true }
+ratatui = { workspace = true, optional = true }
+arbitrary = { version = "1", features = ["derive"], optional = true }
+crossterm-025 = { package = "crossterm", version = "0.28.0", optional = true }
+regex = { version = "1", optional = true }
+termion = { version = "4.0.0", optional = true }
+termwiz = { version = "0.22.0", optional = true }
+tui = { version = "0.19", default-features = false, optional = true }
+unicode-width = "0.1.11"
+serde = { version = "1", optional = true, features = ["derive"] }
+
 [features]
 default = ["crossterm"]
 # Features to use ratatui
@@ -32,18 +51,6 @@ tuirs-no-backend = ["tuirs"]
 # Other optional features
 search = ["dep:regex"]
 serde = ["dep:serde"]
-
-[dependencies]
-arbitrary = { version = "1", features = ["derive"], optional = true }
-crossterm = { package = "crossterm", version = "0.27", optional = true }
-ratatui = { version = "0.27", default-features = false, optional = true }
-crossterm-025 = { package = "crossterm", version = "0.27.0", optional = true }
-regex = { version = "1", optional = true }
-termion = { version = "4.0.0", optional = true }
-termwiz = { version = "0.22.0", optional = true }
-tui = { version = "0.19", default-features = false, optional = true }
-unicode-width = "0.1.11"
-serde = { version = "1", optional = true, features = ["derive"] }
 
 [[example]]
 name = "minimal"
@@ -96,9 +103,6 @@ required-features = ["tuirs-crossterm", "search"]
 [[example]]
 name = "tuirs_termion"
 required-features = ["tuirs-termion"]
-
-[workspace]
-members = ["bench", "ded"]
 
 [profile.bench]
 lto = "thin"
