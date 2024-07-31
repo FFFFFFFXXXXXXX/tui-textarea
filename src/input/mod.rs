@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// This type is marked as `#[non_exhaustive]` since more keys may be supported in the future.
 #[non_exhaustive]
-#[derive(Default, Clone, Copy, Debug, PartialEq, Hash)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Key {
