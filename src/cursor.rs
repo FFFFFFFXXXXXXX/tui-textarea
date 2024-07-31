@@ -308,13 +308,8 @@ impl CursorMove {
                 }
             }
             WordForward => {
-                let chars = lines[row].chars().count();
                 if let Some(col) = find_word_exclusive_end_forward(&lines[row], col) {
                     Some((row, col))
-                } else if col == chars {
-                    lines
-                        .get(row + 1)
-                        .map(|line| (row + 1, find_word_exclusive_end_forward(line, 0).unwrap_or(0)))
                 } else {
                     Some((row + 1, 0))
                 }
